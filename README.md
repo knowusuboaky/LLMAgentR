@@ -180,6 +180,8 @@ Then restart R for the changes to take effect.
 Create a reusable LLM wrapper function to standardize your calls:
 
 ```r
+library(chatLLM)
+
 my_llm_wrapper <- function(prompt) {
   call_llm(
     prompt = prompt,
