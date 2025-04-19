@@ -200,7 +200,7 @@ my_llm_wrapper <- function(prompt) {
 |------------------------|-----------------------------------|
 | Code Generator         | `build_code_agent()`              |
 | SQL Agent              | `build_sql_agent()`               |
-| Researcher             | `create_researcher_agent()`       |
+| Researcher             | `build_researcher_agent()`       |
 | Interpreter            | `build_interpreter_agent()`       |
 | Document Summarizer    | `build_doc_summarizer()`          |
 | Feature Engineering    | `build_feature_engineering_agent()` |
@@ -264,10 +264,10 @@ result <- sql_agent(state)
 print(result$data_sql) # Output the SQL query result
 ```
 
-### 3. Research Queries with `create_researcher_agent()`
+### 3. Research Queries with `build_researcher_agent()`
 
 ```r
-researcher <- create_researcher_agent(llm = my_llm_wrapper) 
+researcher <- build_researcher_agent(llm = my_llm_wrapper) 
 response <- researcher("Latest Messi news today?")
 cat(response$response) # Output the research response
 ```
