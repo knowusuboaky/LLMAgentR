@@ -236,7 +236,8 @@ Explore detailed usage of each agent clearly:
 
 ```r
 result <- build_code_agent(
-  llm = my_llm_wrapper, # LLM wrapper function 
+  llm = my_llm_wrapper, # LLM wrapper function
+  system_prompt = NULL, # Optional system-level prompt with behavior instructions.
   user_input = "Write an R function that removes NA rows from a dataframe.",
   n_tries = 3, # Number of attempts to generate code
   backoff = 2 # Backoff time in seconds between attempts
@@ -253,7 +254,9 @@ conn <- DBI::dbConnect(RSQLite::SQLite(), "northwind.db") # Connect to SQLite da
 sql_agent <- build_sql_agent(
   model = my_llm_wrapper, # LLM wrapper function
   connection = conn, # Database connection
-  human_validation = FALSE # Enable human validation for SQL queries
+  human_validation = FALSE, # Enable human validation for SQL queries
+  bypass_recommended_steps = FALSE, # Skip recommended steps?
+  bypass_explain_code = FALSE   # Skip explanation step?
 )
 
 state <- list(user_instructions = "What are the sales for each product?. Hint: (UnitPrice * Quantity) = Sales.")
