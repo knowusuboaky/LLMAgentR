@@ -236,9 +236,9 @@ Explore detailed usage of each agent clearly:
 
 ```r
 result <- build_code_agent(
-  llm = my_llm_wrapper, # LLM wrapper function
-  system_prompt = NULL, # Optional system-level prompt with behavior instructions.
+  llm = my_llm_wrapper, # LLM wrapper function 
   user_input = "Write an R function that removes NA rows from a dataframe.",
+  system_prompt = NULL, # Optional system-level prompt with behavior instructions.
   n_tries = 3, # Number of attempts to generate code
   backoff = 2 # Backoff time in seconds between attempts
 )
@@ -264,7 +264,7 @@ result <- sql_agent(state)
 print(result$data_sql) # Output the SQL query result
 ```
 
-### 3. Research Queries with `build_researcher_agent()`
+### 3. Research Queries with `create_researcher_agent()`
 
 ```r
 researcher <- build_researcher_agent(llm = my_llm_wrapper) 
