@@ -1,5 +1,7 @@
 # tests/testthat/test_build_data_wrangling_agent.R
 
+# tests/testthat/test_build_data_wrangling_agent.R
+
 context("build_data_wrangling_agent()")
 
 library(testthat)
@@ -36,12 +38,13 @@ make_fake_model <- function(valid_code = TRUE) {
   }
 }
 
-# ── 1. Happy‑path: wrangler merges the frames correctly ───────────────────
+# ── 1. Happy-path: wrangler merges the frames correctly ───────────────────
 test_that("wrangling agent returns merged data on valid code", {
   agent <- build_data_wrangling_agent(
     model                    = make_fake_model(TRUE),
     bypass_recommended_steps = TRUE,
-    bypass_explain_code      = TRUE
+    bypass_explain_code      = TRUE,
+    verbose                  = FALSE
   )
 
   st <- list(data_raw = list(df1 = df1, df2 = df2))
@@ -54,18 +57,20 @@ test_that("wrangling agent returns merged data on valid code", {
   expect_equal(nrow(res$data_wrangled), 4)
 })
 
-# ── 2. Failure‑path: invalid code triggers clear error at execution node ─
+# ── 2. Failure-path: invalid code triggers clear error at execution node ─
 test_that("wrangling agent errors clearly when code is invalid", {
   bad_agent <- build_data_wrangling_agent(
     model                    = make_fake_model(FALSE),
     bypass_recommended_steps = TRUE,
-    bypass_explain_code      = TRUE
+    bypass_explain_code      = TRUE,
+    verbose                  = FALSE
   )
 
   st_bad <- list(data_raw = list(df1, df2))
 
+  # Expect the extraction error from execute node
   expect_error(
     suppressWarnings(bad_agent(st_bad)),
-    "No valid 'data_wrangler' function detected"
+    "No R code could be extracted from the data wrangler function"
   )
 })

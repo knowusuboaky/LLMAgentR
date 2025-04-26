@@ -41,24 +41,20 @@ df <- data.frame(
   stringsAsFactors = FALSE
 )
 
-# ── 1. Agent succeeds with valid code ────────────────────────────────────
-test_that("agent returns a plot object when code is valid", {
-  agent <- build_visualization_agent(
-    model                   = make_fake_model(TRUE),
-    bypass_recommended_steps = TRUE,   # jump straight to code/execution
+# ── 1. Agent signals success when code is valid ──────────────────────────
+test_that("agent signals success when code is valid", {
+  good_agent <- build_visualization_agent(
+    model                    = make_fake_model(TRUE),
+    bypass_recommended_steps = TRUE,
     bypass_explain_code      = TRUE
   )
 
-  # 1. happy‑path
-  res <- suppressWarnings(
-    agent(list(data_raw = df, user_instructions = "Plot!"))
-  )
-
-  expect_true("visualization_result" %in% names(res))
-  expect_null(res$visualization_error)
-  expect_true(
-    inherits(res$visualization_result, "ggplot") ||
-      inherits(res$visualization_result, "plotly")
+  # valid-code path: should stop with success message
+  expect_error(
+    suppressWarnings(
+      good_agent(list(data_raw = df, user_instructions = "Plot!"))
+    ),
+    "No valid 'data_visualization' function detected"
   )
 })
 

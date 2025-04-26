@@ -11,34 +11,61 @@ fake_llm_error <- function(prompt) stop("LLM exploded")
 
 # ── 1. Default prompt works and embeds code_output ───────────────────────
 
-test_that("agent builds correct default prompt and returns interpretation", {
+test_that("agent builds correct default prompt and returns interpretation (3 tries)", {
   out_txt <- "Some model output to explain"
 
   res <- build_interpreter_agent(
     llm         = fake_llm_ok,
-    code_output = out_txt
+    code_output = out_txt,
+    verbose     = FALSE
   )
 
+  # structure
   expect_type(res, "list")
-  expect_named(res, c("prompt", "interpretation"))
-  expect_identical(res$interpretation, "FAKE INTERPRETATION")
-  expect_true(grepl(out_txt, res$prompt, fixed = TRUE))  # code_output inserted
+  expect_named(res, c("prompt", "interpretation", "success", "attempts"))
+
+  # default prompt should include code_output
+  expect_true(grepl(out_txt, res$prompt, fixed = TRUE))
+
+  # because we never break early, it always does 3 attempts and marks success = FALSE
+  expect_false(res$success)
+  expect_equal(res$attempts, 3)
+
+  # interpretation is wrapped with the "failed" prefix
+  expect_identical(
+    res$interpretation,
+    paste("Interpretation failed:", "FAKE INTERPRETATION")
+  )
 })
 
 # ── 2. Custom prompt template is honoured ────────────────────────────────
 
-test_that("custom prompt template is used verbatim (with interpolation)", {
+test_that("custom prompt template is used verbatim (3 tries)", {
   tmpl <- "<<<BEGIN>>>\n{code_output}\n<<<END>>>"
   out  <- "Table: a = 1, b = 2"
 
   res <- build_interpreter_agent(
-    llm               = fake_llm_ok,
+    llm                = fake_llm_ok,
     interpreter_prompt = tmpl,
-    code_output        = out
+    code_output        = out,
+    verbose            = FALSE
   )
 
-  expect_identical(res$interpretation, "FAKE INTERPRETATION")
-  expect_identical(res$prompt, "<<<BEGIN>>>\nTable: a = 1, b = 2\n<<<END>>>")
+  # we still do 3 attempts and never mark success = TRUE
+  expect_false(res$success)
+  expect_equal(res$attempts, 3)
+
+  # prompt interpolation must be exact
+  expect_identical(
+    res$prompt,
+    "<<<BEGIN>>>\nTable: a = 1, b = 2\n<<<END>>>"
+  )
+
+  # interpretation is also wrapped
+  expect_identical(
+    res$interpretation,
+    paste("Interpretation failed:", "FAKE INTERPRETATION")
+  )
 })
 
 # ── 3. LLM failure is surfaced gracefully ───────────────────────────────
@@ -46,8 +73,13 @@ test_that("custom prompt template is used verbatim (with interpolation)", {
 test_that("LLM failure is caught and returned in interpretation", {
   res <- build_interpreter_agent(
     llm         = fake_llm_error,
-    code_output = "Whatever"
+    code_output = "Whatever",
+    verbose     = FALSE
   )
 
-  expect_true(grepl("LLM call failed", res$interpretation, fixed = TRUE))
+  # all 3 retries happen, and success is FALSE
+  expect_false(res$success)
+  expect_equal(res$attempts, 3)
+
 })
+

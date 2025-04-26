@@ -1,0 +1,37 @@
+After completing this course, you will be able to:
+
+Create a basic project plan
+
+Identify, analyze and monitor risks through a RAID log
+
+Identify different SDLC models, including Waterfall, V-model and Agile 
+
+Explain the Scrum Framework in the context of Agile methodology
+
+Explain the importance of quality management in business project
+
+Create a traceability matrix, mapping business requirements to test case
+
+
+
+After completing this course, you will be able to:
+
+Create a business case by conducting a gap analysis, capability assessment and impact analysis
+
+Explain the key elements of a business case document
+
+Utilize various techniques for gathering requirements from stakeholders
+
+Identify functional and non-functional requirements
+
+Create clear and concise requirements documentation
+
+Develop a user story
+
+Construct a UML diagram
+
+Week 1
+
+
+---------------------------
+Imagine you are working at a large e commerce company. Recently, the company has started to receive a lot of customer complaints due to shipping delays. The only way to identify the issue is to analyze the process end-to-end using business process mapping. As you know, visualization is a powerful tool for communication and understanding of information. Business process mapping allows you to visualize every step of a process from start to finish. As a business analyst, you will use business process mapping as an analytical tool. It helps you to provide a clear visual representation of a business activity or process. It allows both you and the stakeholders to gain a deep understanding of the business's inner workings. With these insights, it enables effective problem solving and process improvement. By visualizing this information, you unlock several benefits. First, it allows you to pinpoint inefficiencies in a process such as bottlenecks and unnecessary repetition that hinder performance. Next, it enhances communication to clarify roles and responsibilities of different systems and staff across a workflow. It also facilitates compliance and training by clearly outlining processes and process changes to staff. And finally, it helps to identify opportunities for automation to save time and reduce error. There are several techniques used for business process mapping such as business activity models, business process modeling notation, data flow diagrams and unified modeling language. Each technique is suitable for different types of analysis and documentation needs. Business activity models, while focused on business activities and not processes, are a form of mapping used to gain a high-level view of what a business does. For example, a simple business activity model for a coffee shop would show several core activities. This would include managing the stock levels of coffee beans, selling coffee to customers, accounting and marketing. Business process modeling notation, also known as BPMN, is a detailed method of process mapping using a standardized set of symbols to document the exact flow of a process. This method is widely used for process improvement and is effective in helping organisations to understand and optimize complex workflows. For example, a BPMN diagram can be used to visualise a document review process. In the process, the document is received and then reviewed. If it is approved, it is sent to the department manager, otherwise, it is archived. Data flow diagrams or DFDs, focus on the flow of data through systems and processes. They are crucial for helping businesses understand how data moves and the interactions that take place. DFDs are often used to bridge communication between technical and non-technical audiences. For example, sending an email from your mobile phone can be represented using a DFD. The mobile phone user writes an email and it is stored on the device. The mobile phone then sends the email to the email server for delivery to the recipient. Unified modeling language, or UML, is a modeling language often used in software development, which can also be used for business process mapping. It includes a range of diagram types. These include activity diagrams and sequence diagrams, which can be used to model processes at various levels of complexity. Interactions with banking application software can be shown in a simple UML use case diagram. This diagram would show a user interacting with the application to complete actions such as view account balance and transfer money. Business process mapping is an essential skill in todays analytical and data-driven work environments, helping businesses streamline operations and enhance efficiency. By understanding and applying the right mapping techniques, businesses can unlock significant improvements, reduce costs, and improve overall performance. As you encounter different projects and business problems, consider where different modelling techniques can be applied to gain insights.

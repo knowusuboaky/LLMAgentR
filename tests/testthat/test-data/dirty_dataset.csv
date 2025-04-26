@@ -1,0 +1,6 @@
+ID,Name,Age,Email,Join Date,Salary,Department,Comments
+1.0,John,25,john.doe@example.com,2023-01-01,100000,Sales,Good employee.
+2.0,Jane,29,jane.doe@,2023/02/15,120000.5,IT,Promising
+2.0,Jane,,jane.doe@example.com,"March 1, 2023",-50000,IT,Repeated entry
+,Doe,22,doe.doe@example.com,,200000,HR,No comments
+5.0,Alice,Thirty,,2023-13-01,Not Available,,
