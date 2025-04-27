@@ -1,0 +1,7 @@
+url: https://knowusuboaky.github.io/LLMAgentR/
+template:
+  bootstrap: 5
+  update: true
+  assets:
+    - inst/assets/
+
