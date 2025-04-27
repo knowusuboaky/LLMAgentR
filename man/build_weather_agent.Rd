@@ -2,41 +2,59 @@
 % Please edit documentation in R/build_weather_agent.R
 \name{build_weather_agent}
 \alias{build_weather_agent}
-\title{Build a Weather Agent using OpenWeatherMap + LLM}
+\title{Build a Weather Agent}
 \arguments{
 \item{llm}{A function that accepts a character prompt and returns an LLM response.}
 
-\item{location_query}{Free-text user query (e.g., "weather in Toronto").}
+\item{location_query}{Free-text location query (e.g., "weather in Toronto").}
 
-\item{system_prompt}{Optional LLM system prompt.}
+\item{system_prompt}{Optional LLM system prompt for weather reporting.}
 
-\item{weather_api_key}{API key for OpenWeatherMap. Defaults to \code{Sys.getenv("OPENWEATHERMAP_API_KEY")}.}
+\item{weather_api_key}{OpenWeatherMap API key (defaults to OPENWEATHERMAP_API_KEY env var).}
 
-\item{units}{Unit system, either "metric" (deg Celsius) or "imperial" (deg Fahrenheit).}
+\item{units}{Unit system ("metric" or "imperial").}
 
-\item{n_tries}{Number of retry attempts if weather or LLM calls fail.}
+\item{n_tries}{Number of retry attempts for API/LLM calls (default: 3).}
 
-\item{backoff}{Seconds to wait between retries.}
+\item{backoff}{Base seconds to wait between retries (default: 2).}
 
-\item{cache_ttl}{Time-to-live (in minutes) for cached weather data.}
+\item{endpoint_url}{OpenWeatherMap endpoint URL.}
 
-\item{endpoint_url}{OpenWeatherMap endpoint URL. Defaults to \code{https://api.openweathermap.org/data/2.5/weather}.}
+\item{verbose}{Logical controlling progress messages (default: TRUE).}
 }
 \value{
-A list including success flag, location, weather data, LLM response, and cache status.
+A list containing:
+\itemize{
+  \item success - Logical indicating if operation succeeded
+  \item location - Cleaned location string
+  \item weather_raw - Raw API response
+  \item weather_formatted - Formatted weather string
+  \item llm_response - Generated weather report
+  \item timestamp - Time of response
+  \item cache_hit - Logical indicating cache usage
+  \item attempts - Number of tries made
+}
 }
 \description{
-This function fetches weather data using the OpenWeatherMap API and formats
-the results through an LLM (like OpenAI or Claude) to generate a concise
-user-facing weather report.
+Constructs an LLM-powered weather assistant that fetches data from OpenWeatherMap
+and generates user-friendly reports. Handles location parsing, API calls, caching,
+and LLM-based summarization.
 }
 \examples{
 \dontrun{
-Sys.setenv(OPENWEATHERMAP_API_KEY = "your_api_key")
-response <- build_weather_agent(
+# Using environment variable
+Sys.setenv(OPENWEATHERMAP_API_KEY = "your_key")
+report <- build_weather_agent(
   llm = call_llm,
   location_query = "Paris, FR"
 )
-cat(response$llm_response)
+
+# With explicit API key
+report <- build_weather_agent(
+  llm = call_llm,
+  location_query = "New York",
+  weather_api_key = "your_key",
+  verbose = FALSE
+)
 }
 }

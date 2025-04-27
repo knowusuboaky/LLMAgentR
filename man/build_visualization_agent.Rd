@@ -2,30 +2,23 @@
 % Please edit documentation in R/build_visualization_agent.R
 \name{build_visualization_agent}
 \alias{build_visualization_agent}
-\title{Build a Data Visualization Agent}
+\title{Build Visualization Agent}
 \arguments{
-\item{model}{A function that takes a prompt and returns an LLM-generated result.}
+\item{model}{The AI model function to use for code generation}
 
-\item{human_validation}{Logical; enable a manual review step.}
+\item{human_validation}{Whether to include human validation step (default: FALSE)}
 
-\item{bypass_recommended_steps}{Logical; skip initial step recommendation.}
+\item{bypass_recommended_steps}{Skip recommendation step (default: FALSE)}
 
-\item{bypass_explain_code}{Logical; skip the final explanation step.}
+\item{bypass_explain_code}{Skip explanation step (default: FALSE)}
 
-\item{function_name}{Name for the generated visualization function (default: `"data_visualization"`).}
+\item{function_name}{Name for generated visualization function (default: "data_visualization")}
+
+\item{verbose}{Whether to print progress messages (default: TRUE)}
 }
 \value{
-A callable agent function that mutates the given `state` list.
+A function that takes state and returns visualization results
 }
 \description{
-Constructs a state graph-based visualization agent that:
-recommends, generates, executes, fixes, and explains charting code using `plotly` or `ggplot2`.
-}
-\examples{
-\dontrun{
-state <- list(data_raw = iris, user_instructions = "Plot Sepal.Length by Species")
-agent <- build_visualization_agent(model = call_llm)
-agent(state)
-print(state$visualization_result)
-}
+Creates a data visualization agent with configurable workflow steps.
 }

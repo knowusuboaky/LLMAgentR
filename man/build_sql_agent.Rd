@@ -15,6 +15,8 @@
 \item{bypass_recommended_steps}{If TRUE, skip the step recommendation node.}
 
 \item{bypass_explain_code}{If TRUE, skip the final explanation step.}
+
+\item{verbose}{Logical indicating whether to print progress messages (default: TRUE).}
 }
 \value{
 A compiled SQL agent function that runs via a state machine (graph execution).
@@ -29,7 +31,8 @@ and automatic explanation of the final code.
 agent <- build_sql_agent(
   model = call_llm,
   connection = DBI::dbConnect(RSQLite::SQLite(), ":memory:"),
-  human_validation = FALSE
+  human_validation = FALSE,
+  verbose = TRUE
 )
 state <- list(user_instructions = "Which Categories bring in the highest total revenue# Hint: ...")
 agent(state)

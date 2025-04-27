@@ -11,6 +11,8 @@
 \item{bypass_recommended_steps}{Logical; skip initial recommendation of wrangling steps.}
 
 \item{bypass_explain_code}{Logical; skip final explanation step after wrangling.}
+
+\item{verbose}{Logical; whether to print progress messages (default: TRUE)}
 }
 \value{
 A callable agent function that mutates a provided `state` list by populating:

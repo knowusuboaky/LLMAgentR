@@ -6,24 +6,38 @@
 \arguments{
 \item{llm}{A function that accepts a character prompt and returns an LLM response.}
 
-\item{interpreter_prompt}{Optional custom prompt template.}
+\item{interpreter_prompt}{Optional custom prompt template (default provides
+structured interpretation framework).}
 
-\item{code_output}{A string representing the output to interpret (e.g., chart summary, table, etc.).}
+\item{code_output}{The output to interpret (chart summary, table, text results etc.).}
+
+\item{max_tries}{Maximum number of attempts for LLM calls (default: 3).}
+
+\item{backoff}{Seconds to wait between retries (default: 2).}
+
+\item{verbose}{Logical controlling progress messages (default: TRUE).}
 }
 \value{
-A list with the full prompt and LLM-generated interpretation.
+A list containing:
+\itemize{
+  \item prompt - The full prompt sent to LLM
+  \item interpretation - The generated interpretation
+  \item success - Logical indicating if interpretation succeeded
+  \item attempts - Number of tries made
+}
 }
 \description{
-This agent uses an LLM to interpret various types of output such as plots,
-tables, or text-based results. It returns a structured explanation and
-takeaways, useful for both technical and non-technical audiences.
+Constructs an agent that uses LLM to interpret various outputs (plots, tables,
+text results) and provides structured explanations suitable for both technical
+and non-technical audiences.
 }
 \examples{
 \dontrun{
+# Interpret ggplot output
+plot_summary <- ggplot2::ggplot(mtcars, aes(mpg, hp)) + geom_point()
 result <- build_interpreter_agent(
   llm = call_llm,
-  code_output = "Explain the results..."
+  code_output = capture.output(print(plot_summary))
 )
-cat(result$interpretation)
 }
 }

@@ -13,6 +13,8 @@
 \item{bypass_recommended_steps}{Logical; whether to skip LLM-based cleaning step suggestions.}
 
 \item{bypass_explain_code}{Logical; whether to skip explanation of the generated code.}
+
+\item{verbose}{Logical; whether to print progress messages (default: TRUE)}
 }
 \value{
 A compiled graph-based cleaning agent function that accepts and mutates a state list.

@@ -13,6 +13,8 @@
 \item{mode}{Visualization mode for forecast plots. One of `"light"` or `"dark"`.}
 
 \item{line_width}{Line width used in plotly forecast visualization.}
+
+\item{verbose}{Logical; whether to print progress messages.}
 }
 \value{
 A callable agent function that mutates the given `state` list.

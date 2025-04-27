@@ -11,6 +11,8 @@
 \item{bypass_recommended_steps}{Logical; skip the LLM-based recommendation phase.}
 
 \item{bypass_explain_code}{Logical; skip final explanation step.}
+
+\item{verbose}{Logical; whether to print progress messages (default: TRUE)}
 }
 \value{
 A callable agent function that executes feature engineering via a state graph.

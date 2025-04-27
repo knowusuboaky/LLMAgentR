@@ -3,20 +3,53 @@
 \name{build_doc_summarizer_agent}
 \alias{build_doc_summarizer_agent}
 \title{Build a Document Summarizer Agent}
+\usage{
+build_doc_summarizer_agent(
+  llm,
+  summary_template = NULL,
+  chunk_size = 4000,
+  overlap = 200,
+  verbose = TRUE
+)
+}
 \arguments{
-\item{llm}{A function that takes a character prompt and returns a response.}
+\item{llm}{A function that accepts a character prompt and returns an LLM response.}
+
+\item{summary_template}{Optional custom summary template in markdown format.}
+
+\item{chunk_size}{Maximum character length for document chunks (default: 4000).}
+
+\item{overlap}{Character overlap between chunks (default: 200).}
+
+\item{verbose}{Logical controlling progress messages (default: TRUE).}
 }
 \value{
-A function that accepts a file path or text input and returns a summary.
+A function that accepts file paths or text input and returns:
+\itemize{
+  \item summary - The generated markdown summary
+  \item metadata - Document metadata if available
+  \item chunks - Number of processing chunks used
+  \item success - Logical indicating success
+}
 }
 \description{
-This function returns a document summarization workflow using a provided LLM.
-It can process PDF, DOCX, PPTX, TXT, or plain text input and return a markdown-formatted summary.
+Creates an LLM-powered document summarization workflow that processes PDF, DOCX,
+PPTX, TXT, or plain text input and returns structured markdown summaries.
 }
 \examples{
 \dontrun{
-summarizer <- build_doc_summarizer(llm = call_llm)
-summary <- summarizer("my_paper.pdf")
-cat(summary)
+# With default settings
+summarizer <- build_doc_summarizer_agent(llm = call_llm)
+
+# With custom template
+custom_template <- "Summarize this in 3 bullet points:\n{text}"
+summarizer <- build_doc_summarizer_agent(
+  llm = call_llm,
+  summary_template = custom_template
+)
+
+# Process a document
+result <- summarizer("report.docx")
+cat(result$summary)
 }
 }

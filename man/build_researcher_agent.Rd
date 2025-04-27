@@ -4,26 +4,42 @@
 \alias{build_researcher_agent}
 \title{Build a Web Researcher Agent}
 \arguments{
-\item{llm}{A function that accepts a character prompt and returns an LLM response.}
+\item{llm}{A function that accepts a character prompt and returns an LLM response.
+(It must accept `prompt` and optionally `verbose`.)}
 
-\item{tavily_search}{API key string or NULL to use \code{Sys.getenv("TAVILY_API_KEY")}.}
+\item{tavily_search}{Tavily API key as a string or NULL to use `Sys.getenv("TAVILY_API_KEY")`.}
 
-\item{system_prompt}{Optional custom system prompt.}
+\item{system_prompt}{Optional custom system prompt for the researcher agent.}
 
-\item{max_results}{Number of search results to return (default 5).}
+\item{max_results}{Number of web search results to retrieve per query (default: 5).}
+
+\item{max_tries}{Maximum number of retry attempts for search or LLM call (default: 3).}
+
+\item{backoff}{Initial wait time in seconds between retries (default: 2).}
+
+\item{verbose}{Logical flag to control progress messages (default: TRUE).}
 }
 \value{
-A function that accepts a user query and returns a response list with the prompt, result, and sources.
+A function that accepts a user query string and returns a list with:
+\itemize{
+  \item query - The original research query.
+  \item prompt - The full prompt sent to the LLM.
+  \item response - The generated LLM response.
+  \item search_results - Raw search results (if any were found).
+  \item success - Logical indicating if research succeeded (both search and LLM).
+}
 }
 \description{
-This function builds an LLM-powered researcher agent that performs web
-searches (via the Tavily API) and uses the LLM to summarize, compare,
-or analyze the information depending on the question type.
+Constructs an LLM-powered research agent that performs web searches (via Tavily API)
+and generates structured responses based on search results. The agent handles different
+question types (general knowledge, comparisons, controversial topics) with appropriate
+response formats.
 }
 \examples{
 \dontrun{
-agent <- build_researcher_agent(llm = call_llm)
-result <- agent("What are the latest trends in AI education#")
+agent <- create_researcher_agent(llm = my_llm_wrapper)
+result <- agent("What are the top AI breakthroughs in 2024?")
 cat(result$response)
 }
+
 }

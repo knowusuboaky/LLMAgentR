@@ -6,27 +6,37 @@
 \arguments{
 \item{llm}{A function that accepts a character prompt and returns an LLM response.}
 
-\item{system_prompt}{Optional system-level prompt with behavior instructions.}
+\item{system_prompt}{Optional system-level instructions for the agent's behavior.}
 
-\item{user_input}{The user's input task/query (e.g., "Write a function to filter NA values").}
+\item{user_input}{The user's task/query (e.g., "Write function to filter NAs").}
 
-\item{n_tries}{Number of attempts to retry the LLM call if it fails.}
+\item{max_tries}{Maximum number of attempts for LLM calls (default: 3).}
 
-\item{backoff}{Seconds to wait between retries.}
+\item{backoff}{Seconds to wait between retries (default: 2).}
+
+\item{verbose}{Logical controlling progress messages (default: TRUE).}
 }
 \value{
-A list containing the user input, the system prompt, and the LLM response.
+A list containing:
+\itemize{
+  \item input - The user's original query
+  \item llm_response - The processed LLM response
+  \item system_prompt - The system instructions used
+  \item success - Logical indicating if call succeeded
+  \item attempts - Number of tries made
+}
 }
 \description{
-This function constructs an LLM-based agent for generating, debugging,
-explaining, or optimizing R code using a structured task-specific prompt.
+Constructs an LLM-based agent for generating, debugging, explaining, or
+optimizing R code using structured prompts. The agent handles retries and
+provides comprehensive code assistance.
 }
 \examples{
 \dontrun{
 agent <- build_code_agent(
   llm = call_llm,
-  user_input = "Write an R function that removes NA rows from a dataframe"
+  user_input = "Write function to remove NA rows from dataframe",
+  verbose = FALSE
 )
-cat(agent$llm_response)
 }
 }
