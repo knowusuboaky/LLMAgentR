@@ -47,7 +47,7 @@ test_that("build_code_agent handles LLM errors gracefully", {
   result <- build_code_agent(
     llm = fake_llm_always_error,
     user_input = ui,
-    n_tries = 3,
+    max_tries = 3,
     backoff = 0,
     verbose = FALSE
   )
