@@ -83,11 +83,23 @@ structured interpretation framework).</p></dd>
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
-<span class="r-in"><span><span class="co"># Interpret ggplot output</span></span></span>
-<span class="r-in"><span><span class="va">plot_summary</span> <span class="op">&lt;-</span> <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">mtcars</span>, <span class="fu">aes</span><span class="op">(</span><span class="va">mpg</span>, <span class="va">hp</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span> <span class="fu">geom_point</span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu">build_interpreter_agent</span><span class="op">(</span></span></span>
-<span class="r-in"><span>  llm <span class="op">=</span> <span class="va">call_llm</span>,</span></span>
-<span class="r-in"><span>  code_output <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/utils/capture.output.html" class="external-link">capture.output</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">plot_summary</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="co"># Example table or code output</span></span></span>
+<span class="r-in"><span><span class="va">output_text</span> <span class="op">&lt;-</span> <span class="st">"</span></span></span>
+<span class="r-in"><span><span class="st">| Region  | Sales | Profit |</span></span></span>
+<span class="r-in"><span><span class="st">|---------|-------|--------|</span></span></span>
+<span class="r-in"><span><span class="st">| North   |  2000 |   300  |</span></span></span>
+<span class="r-in"><span><span class="st">| South   |  1500 |   250  |</span></span></span>
+<span class="r-in"><span><span class="st">| East    |  1800 |   400  |</span></span></span>
+<span class="r-in"><span><span class="st">| West    |  2200 |   100  |</span></span></span>
+<span class="r-in"><span><span class="st">"</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Build interpreter agent</span></span></span>
+<span class="r-in"><span><span class="va">interpreter_agent</span> <span class="op">&lt;-</span> <span class="fu">build_interpreter_agent</span><span class="op">(</span></span></span>
+<span class="r-in"><span>  llm <span class="op">=</span> <span class="va">my_llm_wrapper</span>,</span></span>
+<span class="r-in"><span>  code_output <span class="op">=</span> <span class="va">output_text</span>,</span></span>
+<span class="r-in"><span>  max_tries <span class="op">=</span> <span class="fl">3</span>,</span></span>
+<span class="r-in"><span>  backoff <span class="op">=</span> <span class="fl">2</span>,</span></span>
+<span class="r-in"><span>  verbose <span class="op">=</span> <span class="cn">FALSE</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
 </code></pre></div>
