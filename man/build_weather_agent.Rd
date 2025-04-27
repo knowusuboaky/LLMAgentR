@@ -42,18 +42,16 @@ and LLM-based summarization.
 }
 \examples{
 \dontrun{
-# Using environment variable
-Sys.setenv(OPENWEATHERMAP_API_KEY = "your_key")
-report <- build_weather_agent(
-  llm = call_llm,
-  location_query = "Paris, FR"
-)
-
-# With explicit API key
-report <- build_weather_agent(
-  llm = call_llm,
-  location_query = "New York",
-  weather_api_key = "your_key",
+# Get weather information
+weather_agent <- build_weather_agent(
+  llm = my_llm_wrapper,
+  location_query = "Tokyo, Japan",
+  system_prompt = NULL,
+  weather_api_key = NULL,
+  units = "metric", # metric or imperial
+  n_tries = 3,
+  backoff = 2,
+  endpoint_url = NULL,
   verbose = FALSE
 )
 }

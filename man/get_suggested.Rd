@@ -20,6 +20,11 @@ This utility ensures a package listed in `Suggests:` is available,
 and optionally returns a function from it. If no function is provided,
 it just checks the package presence (like a safe `requireNamespace()`).
 }
-\details{
-Base R packages are automatically considered available.
-}
+\keyword{Base}
+\keyword{R}
+\keyword{are}
+\keyword{automatically}
+\keyword{available.}
+\keyword{considered}
+\keyword{internal}
+\keyword{packages}

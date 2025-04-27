@@ -51,8 +51,7 @@ A character response entered by the user.
 A list with `goto` and `update` keys.
 }
 \description{
-A lightweight framework for building state-driven workflows using nodes, edges,
-and conditionally branching logic. Each node is a function that takes and mutates a shared `state` list.
+State Graph Framework
 }
 \section{Functions}{
 \itemize{
@@ -87,7 +86,33 @@ agent <- graph$compile()
 state <- list()
 agent(state)
 }
+\keyword{A}
+\keyword{Each}
+\keyword{`state`}
+\keyword{a}
+\keyword{and}
+\keyword{branching}
+\keyword{building}
+\keyword{conditionally}
+\keyword{edges,}
+\keyword{for}
+\keyword{framework}
+\keyword{function}
 \keyword{graph}
+\keyword{internal}
+\keyword{is}
+\keyword{lightweight}
+\keyword{list.}
 \keyword{llm}
+\keyword{logic.}
+\keyword{mutates}
+\keyword{node}
+\keyword{nodes,}
+\keyword{shared}
 \keyword{state}
+\keyword{state-driven}
+\keyword{takes}
+\keyword{that}
+\keyword{using}
 \keyword{workflow}
+\keyword{workflows}

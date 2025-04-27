@@ -28,13 +28,28 @@ and automatic explanation of the final code.
 }
 \examples{
 \dontrun{
-agent <- build_sql_agent(
-  model = call_llm,
-  connection = DBI::dbConnect(RSQLite::SQLite(), ":memory:"),
-  human_validation = FALSE,
-  verbose = TRUE
+# 1) Connect to the database
+conn <- DBI::dbConnect(RSQLite::SQLite(), "tests/testthat/test-data/northwind.db")
+
+# 2) Create the SQL agent
+sql_agent <- build_sql_agent(
+  model                    = my_llm_wrapper,
+  connection               = conn,
+  human_validation         = FALSE,
+  bypass_recommended_steps = FALSE,
+  bypass_explain_code      = FALSE,
+  verbose                  = FALSE
 )
-state <- list(user_instructions = "Which Categories bring in the highest total revenue# Hint: ...")
-agent(state)
+
+# 3) Define the initial state
+initial_state <- list(
+  user_instructions = "Identify the Regions (or Territories) with the highest CustomerCount and TotalSales. Return a table with columns: Region, CustomerCount, and TotalSales.
+Hint: (UnitPrice × Quantity).",
+  max_retries       = 3,
+  retry_count       = 0
+)
+
+# 4) Run the agent
+final_state <- sql_agent(initial_state)
 }
 }

@@ -24,9 +24,11 @@
 #'
 #' @examples
 #' \dontrun{
-#' agent <- build_code_agent(
-#'   llm = call_llm,
-#'   user_input = "Write function to remove NA rows from dataframe",
+#' coder_agent <- build_code_agent(
+#'   llm = my_llm_wrapper,
+#'   user_input = "Write an R function to standardize numeric columns in a data frame using dplyr.",
+#'   max_tries = 3,
+#'   backoff = 2,
 #'   verbose = FALSE
 #' )
 #' }

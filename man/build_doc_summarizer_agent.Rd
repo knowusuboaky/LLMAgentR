@@ -38,18 +38,16 @@ PPTX, TXT, or plain text input and returns structured markdown summaries.
 }
 \examples{
 \dontrun{
-# With default settings
-summarizer <- build_doc_summarizer_agent(llm = call_llm)
-
-# With custom template
-custom_template <- "Summarize this in 3 bullet points:\n{text}"
-summarizer <- build_doc_summarizer_agent(
-  llm = call_llm,
-  summary_template = custom_template
+# Build document summarizer agent
+summarizer_agent <- build_doc_summarizer_agent(
+  llm = my_llm_wrapper,
+  summary_template = NULL,
+  chunk_size = 4000,
+  overlap = 200,
+  verbose = FALSE
 )
 
-# Process a document
-result <- summarizer("report.docx")
-cat(result$summary)
+# Summarize document
+final_state <- summarizer_agent("https://github.com/knowusuboaky/LLMAgentR/raw/main/tests/testthat/test-data/scrum.docx")
 }
 }

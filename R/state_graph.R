@@ -1,4 +1,5 @@
 #' State Graph Framework
+#' @keywords internal
 #'
 #' A lightweight framework for building state-driven workflows using nodes, edges,
 #' and conditionally branching logic. Each node is a function that takes and mutates a shared `state` list.
@@ -48,6 +49,8 @@ make_edge <- function(from, to, condition = NULL, label = NULL) {
 #' @describeIn state_graph Build a State Graph Execution Engine
 #' @return A list of graph methods: \code{add_node}, \code{add_edge},
 #' \code{add_conditional_edges}, \code{set_entry_point}, \code{compile}, \code{END_NODE_NAME}
+#'
+#' @keywords internal
 #'
 #' @examples
 #' graph <- StateGraph()

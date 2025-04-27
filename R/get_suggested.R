@@ -3,7 +3,7 @@
 #' This utility ensures a package listed in `Suggests:` is available,
 #' and optionally returns a function from it. If no function is provided,
 #' it just checks the package presence (like a safe `requireNamespace()`).
-#'
+#' @keywords internal
 #' Base R packages are automatically considered available.
 #'
 #' @param pkg Character string. Name of the package.

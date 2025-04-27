@@ -897,13 +897,28 @@ node_explain_data_cleaner_code <- function(
 #' @return A compiled graph-based cleaning agent function that accepts and mutates a state list.
 #' @examples
 #' \dontrun{
-#' state <- list(
-#'   data_raw = mtcars,
-#'   user_instructions = "Don't remove outliers when cleaning the data."
+#' # 1) Load the data
+#' data <- read.csv("tests/testthat/test-data/churn_data.csv")
+#'
+#' # 2) Create the agent
+#' data_cleaner_agent <- build_data_cleaning_agent(
+#'   model = my_llm_wrapper,
+#'   human_validation = FALSE,
+#'   bypass_recommended_steps = FALSE,
+#'   bypass_explain_code = FALSE,
+#'   verbose = FALSE
 #' )
-#' agent <- build_data_cleaning_agent(model = call_llm, data_raw = mtcars)
-#' agent(state)
-#' str(state$data_cleaned)
+#'
+#' # 3) Define the initial state
+#' initial_state <- list(
+#'   data_raw = data,
+#'   user_instructions = "Don't remove outliers when cleaning the data.",
+#'   max_retries = 3,
+#'   retry_count = 0
+#' )
+#'
+#' # 4) Run the agent
+#' final_state <- data_cleaner_agent(initial_state)
 #' }
 #' @export
 NULL

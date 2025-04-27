@@ -1,9 +1,22 @@
-url: https://knowusuboaky.github.io/LLMAgentR/
 template:
   bootstrap: 5
   update: yes
   assets:
-  - assets/monthly_charges_vs_churn.html
-  - assets/forecast_dark_plot.html
-  - assets/forecast_light_plot.html
+    - assets/monthly_charges_vs_churn.html
+    - assets/forecast_dark_plot.html
+    - assets/forecast_light_plot.html
 
+reference:
+  - title: "Functions"
+    contents:
+      - build_code_agent
+      - build_data_cleaning_agent
+      - build_data_wrangling_agent
+      - build_doc_summarizer_agent
+      - build_feature_engineering_agent
+      - build_forecasting_agent
+      - build_interpreter_agent
+      - build_researcher_agent
+      - build_sql_agent
+      - build_visualization_agent
+      - build_weather_agent

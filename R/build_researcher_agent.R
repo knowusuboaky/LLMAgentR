@@ -27,9 +27,19 @@
 #'
 #' @examples
 #' \dontrun{
-#' agent <- create_researcher_agent(llm = my_llm_wrapper)
-#' result <- agent("What are the top AI breakthroughs in 2024?")
-#' cat(result$response)
+#' # Initialize researcher agent
+#' researcher_agent <- build_researcher_agent(
+#'   llm = my_llm_wrapper,
+#'   tavily_search = NULL,
+#'   system_prompt = NULL,
+#'   max_results = 5,
+#'   max_tries = 3,
+#'   backoff = 2,
+#'   verbose = FALSE
+#' )
+#'
+#' # Perform research
+#' result <- researcher_agent("Who is Messi?")
 #' }
 #'
 #' @export

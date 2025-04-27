@@ -28,13 +28,46 @@ The resulting function handles list or single data frame inputs and produces a c
 }
 \examples{
 \dontrun{
-state <- list(
-  data_raw = iris,
-  user_instructions = "Merge the data frames on the ID column."
+# 1) Simulate multiple data frames with a common ID
+df1 <- data.frame(
+  ID = c(1, 2, 3, 4),
+  Name = c("John", "Jane", "Jim", "Jill"),
+  stringsAsFactors = FALSE
 )
-agent <- build_data_wrangling_agent(model = call_llm)
-agent(state)
-print(state$data_wrangled)
-}
 
+df2 <- data.frame(
+  ID = c(1, 2, 3, 4),
+  Age = c(25, 30, 35, 40),
+  stringsAsFactors = FALSE
+)
+
+df3 <- data.frame(
+  ID = c(1, 2, 3, 4),
+  Education = c("Bachelors", "Masters", "PhD", "MBA"),
+  stringsAsFactors = FALSE
+)
+
+# 2) Combine into a list
+data <- list(df1, df2, df3)
+
+# 3) Create the agent
+data_wrangling_agent <- build_data_wrangling_agent(
+  model = my_llm_wrapper,
+  human_validation = FALSE,
+  bypass_recommended_steps = FALSE,
+  bypass_explain_code = FALSE,
+  verbose = FALSE
+)
+
+# 4) Define the initial state
+initial_state <- list(
+  data_raw = data,
+  user_instructions = "Merge the data frames on the ID column.",
+  max_retries = 3,
+  retry_count = 0
+)
+
+# 5) Run the agent
+final_state <- data_wrangling
+}
 }

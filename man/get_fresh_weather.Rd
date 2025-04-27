@@ -25,8 +25,28 @@ A named `list` with two elements:
   }
 }
 \description{
-Internal helper that queries the OpenWeatherMap API and converts the
-JSON response into a tidy list containing both the raw payload and a
-human-readable summary string.
+Fetch fresh weather data from OpenWeatherMap
 }
+\keyword{API}
+\keyword{Internal}
+\keyword{JSON}
+\keyword{OpenWeatherMap}
+\keyword{a}
+\keyword{and}
+\keyword{both}
+\keyword{containing}
+\keyword{converts}
+\keyword{helper}
+\keyword{human-readable}
 \keyword{internal}
+\keyword{into}
+\keyword{list}
+\keyword{payload}
+\keyword{queries}
+\keyword{raw}
+\keyword{response}
+\keyword{string.}
+\keyword{summary}
+\keyword{that}
+\keyword{the}
+\keyword{tidy}

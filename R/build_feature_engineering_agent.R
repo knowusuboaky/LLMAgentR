@@ -939,14 +939,31 @@ NULL
 #' @return A callable agent function that executes feature engineering via a state graph.
 #' @examples
 #' \dontrun{
-#' state <- list(
-#'   data_raw = iris,
-#'   target_variable = "Species"
+#' # 1) Load the data
+#' data <- read.csv("tests/testthat/test-data/churn_data.csv")
+#'
+#' # 2) Create the feature engineering agent
+#' feature_engineering_agent <- build_feature_engineering_agent(
+#'   model = my_llm_wrapper,
+#'   human_validation = FALSE,
+#'   bypass_recommended_steps = FALSE,
+#'   bypass_explain_code = FALSE,
+#'   verbose = TRUE
 #' )
-#' agent <- build_feature_engineering_agent(model = call_llm)
-#' agent(state)
-#' str(state$data_engineered)
+#'
+#' # 3) Define the initial state
+#' initial_state <- list(
+#'   data_raw = data,
+#'   target_variable = "Churn",
+#'   user_instructions = "Inspect the data. Make any new features and transformations that you think will be useful for predicting the target variable.",
+#'   max_retries = 3,
+#'   retry_count = 0
+#' )
+#'
+#' # 4) Run the agent
+#' final_state <- feature_engineering_agent(initial_state)
 #' }
+#'
 #' @export
 NULL
 

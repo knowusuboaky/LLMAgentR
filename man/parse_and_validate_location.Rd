@@ -15,10 +15,7 @@ A cleaned location string, suitable for passing to the
         the cleaned location is too short or contains digits.
 }
 \description{
-Performs basic text cleaning on a free-form weather/location query,
-strips out common words like "weather", "forecast", "in", "for", and "please",
-then enforces minimal length and alphabetic-only constraints.
-If no country code is present, it also suggests the user include one.
+Clean and Validate a Location Query
 }
 \examples{
 parse_and_validate_location("weather in New York")
@@ -27,3 +24,43 @@ parse_and_validate_location("12345")  # error
 }
 
 }
+\keyword{"for",}
+\keyword{"forecast",}
+\keyword{"in",}
+\keyword{"please",}
+\keyword{"weather",}
+\keyword{If}
+\keyword{Performs}
+\keyword{a}
+\keyword{alphabetic-only}
+\keyword{also}
+\keyword{and}
+\keyword{basic}
+\keyword{cleaning}
+\keyword{code}
+\keyword{common}
+\keyword{constraints.}
+\keyword{country}
+\keyword{enforces}
+\keyword{free-form}
+\keyword{include}
+\keyword{internal}
+\keyword{is}
+\keyword{it}
+\keyword{length}
+\keyword{like}
+\keyword{minimal}
+\keyword{no}
+\keyword{on}
+\keyword{one.}
+\keyword{out}
+\keyword{present,}
+\keyword{query,}
+\keyword{strips}
+\keyword{suggests}
+\keyword{text}
+\keyword{the}
+\keyword{then}
+\keyword{user}
+\keyword{weather/location}
+\keyword{words}

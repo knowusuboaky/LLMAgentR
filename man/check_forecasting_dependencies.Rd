@@ -10,7 +10,40 @@ check_forecasting_dependencies()
 Invisibly TRUE if all packages/functions are available or skipped (base).
 }
 \description{
-This function ensures that all suggested packages and specific functions used in forecasting
-workflows are available at runtime. It assigns each function to a local variable using
-`fun <- get_suggested(pkg, fun)` style for runtime access.
+Check Forecasting Dependencies
 }
+\keyword{<-}
+\keyword{It}
+\keyword{This}
+\keyword{`fun}
+\keyword{a}
+\keyword{access.}
+\keyword{all}
+\keyword{and}
+\keyword{are}
+\keyword{assigns}
+\keyword{at}
+\keyword{available}
+\keyword{each}
+\keyword{ensures}
+\keyword{for}
+\keyword{forecasting}
+\keyword{fun)`}
+\keyword{function}
+\keyword{functions}
+\keyword{get_suggested(pkg,}
+\keyword{in}
+\keyword{internal}
+\keyword{local}
+\keyword{packages}
+\keyword{runtime}
+\keyword{runtime.}
+\keyword{specific}
+\keyword{style}
+\keyword{suggested}
+\keyword{that}
+\keyword{to}
+\keyword{used}
+\keyword{using}
+\keyword{variable}
+\keyword{workflows}

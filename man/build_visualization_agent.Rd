@@ -22,3 +22,31 @@ A function that takes state and returns visualization results
 \description{
 Creates a data visualization agent with configurable workflow steps.
 }
+\examples{
+\dontrun{
+# 1) Load the data
+data <- read.csv("tests/testthat/test-data/churn_data.csv")
+
+# 2) Create the visualization agent
+visualization_agent <- build_visualization_agent(
+  model = my_llm_wrapper,
+  human_validation = FALSE,
+  bypass_recommended_steps = FALSE,
+  bypass_explain_code = FALSE,
+  verbose = FALSE
+)
+
+# 3) Define the initial state
+initial_state <- list(
+  data_raw = data,
+  target_variable = "Churn",
+  user_instructions = "Create a clean and visually appealing box plot to show the distribution of Monthly Charges across Churn categories. Use distinct colors for each Churn group, add clear axis labels, a legend, and a meaningful title.",
+  max_retries = 3,
+  retry_count = 0
+)
+
+# 4) Run the agent
+final_state <- visualization_agent(initial_state)
+}
+
+}

@@ -24,11 +24,23 @@
 #'
 #' @examples
 #' \dontrun{
-#' # Interpret ggplot output
-#' plot_summary <- ggplot2::ggplot(mtcars, aes(mpg, hp)) + geom_point()
-#' result <- build_interpreter_agent(
-#'   llm = call_llm,
-#'   code_output = capture.output(print(plot_summary))
+#' # Example table or code output
+#' output_text <- "
+#' | Region  | Sales | Profit |
+#' |---------|-------|--------|
+#' | North   |  2000 |   300  |
+#' | South   |  1500 |   250  |
+#' | East    |  1800 |   400  |
+#' | West    |  2200 |   100  |
+#' "
+#'
+#' # Build interpreter agent
+#' interpreter_agent <- build_interpreter_agent(
+#'   llm = my_llm_wrapper,
+#'   code_output = output_text,
+#'   max_tries = 3,
+#'   backoff = 2,
+#'   verbose = FALSE
 #' )
 #' }
 #' @export

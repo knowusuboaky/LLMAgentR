@@ -524,6 +524,7 @@ forecast_ts <- function(
 ## PACKAGES FUNCTION
 ###############################################################################
 #' Check Forecasting Dependencies
+#' @keywords internal
 #'
 #' This function ensures that all suggested packages and specific functions used in forecasting
 #' workflows are available at runtime. It assigns each function to a local variable using
@@ -1342,13 +1343,27 @@ node_func_human_review <- function(
 #'
 #' @examples
 #' \dontrun{
-#' state <- list(
-#'   data_raw = tsibble_data,
-#'   user_instructions = "Forecast next 12 months of sales per store"
+#' # 2) Prepare the dataset
+#' my_data <- walmart_sales_weekly
+#'
+#' # 3) Create the forecasting agent
+#' forecasting_agent <- build_forecasting_agent(
+#'   model = my_llm_wrapper,
+#'   bypass_recommended_steps = FALSE,
+#'   bypass_explain_code = FALSE,
+#'   mode = "dark", # dark or light
+#'   line_width = 3,
+#'   verbose = FALSE
 #' )
-#' agent <- build_forecasting_agent(model = call_llm)
-#' agent(state)
-#' print(state$forecasting_result)
+#'
+#' # 4) Define the initial state
+#' initial_state <- list(
+#'   user_instructions = "Forecast sales for the next 30 days, using `id` as the grouping variable, a forecasting horizon of 30, and a confidence level of 90%.",
+#'   data_raw = my_data
+#' )
+#'
+#' # 5) Run the agent
+#' final_state <- forecasting_agent(initial_state)
 #' }
 #'
 #' @export
