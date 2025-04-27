@@ -1,7 +1,9 @@
 url: https://knowusuboaky.github.io/LLMAgentR/
 template:
   bootstrap: 5
-  update: true
+  update: yes
   assets:
-    - inst/assets/
+  - assets/monthly_charges_vs_churn.html
+  - assets/forecast_dark_plot.html
+  - assets/forecast_light_plot.html
 
