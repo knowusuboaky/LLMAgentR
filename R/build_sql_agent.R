@@ -143,7 +143,7 @@ StateGraph <- function() {
 ###############################################################################
 
 interrupt <- function(value) {
-  cat("\n", value, "\n")
+  message("\n", value, "\n")
   readline("Enter your response: ")
 }
 
@@ -164,7 +164,7 @@ node_func_human_review <- function(
     user_instructions_key = "user_instructions",
     recommended_steps_key = "recommended_steps"
 ) {
-  cat("    * HUMAN REVIEW\n")
+  message("    * HUMAN REVIEW")
 
   steps <- if (!is.null(state[[recommended_steps_key]])) state[[recommended_steps_key]] else ""
   user_input <- interrupt(sprintf(prompt_text, steps = steps))
@@ -193,9 +193,10 @@ node_func_execute_agent_from_sql_connection <- function(
     error_key,
     agent_function_name,
     post_processing = NULL,
-    error_message_prefix = "An error occurred during agent execution: "
+    error_message_prefix = "An error occurred during agent execution: ",
+    verbose = TRUE
 ) {
-  cat("    * EXECUTING AGENT CODE ON SQL CONNECTION\n")
+  if (verbose) message("    * EXECUTING AGENT CODE ON SQL CONNECTION")
 
   agent_code  <- state[[code_snippet_key]]
   agent_error <- NULL
@@ -221,7 +222,7 @@ node_func_execute_agent_from_sql_connection <- function(
     }
 
   }, error = function(e) {
-    cat("Error in agent code:", e$message, "\n")
+    if (verbose) message("Error in agent code:", e$message)
     agent_error <<- paste0(error_message_prefix, e$message)
   })
 
@@ -240,9 +241,10 @@ node_func_explain_agent_code <- function(
     role,
     explanation_prompt_template,
     success_prefix = "# Agent Explanation:\n\n",
-    error_message = "The agent encountered an error and cannot be explained."
+    error_message = "The agent encountered an error and cannot be explained.",
+    verbose = TRUE
 ) {
-  cat("    * EXPLAIN AGENT CODE\n")
+  if (verbose) message("    * EXPLAIN AGENT CODE")
 
   agent_error <- state[[error_key]]
   if (!is.null(agent_error)) {
@@ -272,22 +274,48 @@ node_func_explain_agent_code <- function(
 ###############################################################################
 
 # (a) RECOMMEND STEPS
-node_recommend_sql_steps <- function(model, connection, n_samples) {
+node_recommend_sql_steps <- function(model, connection, n_samples, verbose = TRUE) {
   function(state) {
-    cat("---SQL DATABASE AGENT---\n")
-    cat("    * RECOMMEND SQL QUERY STEPS\n")
+    if (verbose) {
+      message("---SQL DATABASE AGENT---")
+      message("    * RECOMMEND SQL QUERY STEPS")
+    }
 
     user_instructions <- if (!is.null(state$user_instructions)) state$user_instructions else ""
     recommended_steps <- if (!is.null(state$recommended_steps)) state$recommended_steps else ""
 
     # Build database metadata summary
-    tables <- dbListTables(connection)
-    meta_lines <- c()
-    for (tb in tables) {
-      cols <- dbListFields(connection, tb)
-      meta_lines <- c(meta_lines, paste0("TABLE: ", tb, "\n  COLUMNS: ", paste(cols, collapse=", ")))
+    # ------------------------------------------------------------------
+
+    # --------- CAUTION STOP inserted here ----------
+    tables <- DBI::dbListTables(connection)
+    if (!DBI::dbIsValid(connection)) {
+      stop("Database connection is invalid. Please reconnect before proceeding.")
     }
-    meta <- paste(meta_lines, collapse="\n\n")
+    if (length(tables) == 0) {
+      stop("No tables found in the database. Ensure your database has tables before running the agent.")
+    }
+    # -------------------------------------------------
+
+
+    # 1) headline with count and plain list
+    headline <- sprintf(
+      "### Available Tables (%d total)\n%s\n",
+      length(tables),
+      paste(sprintf("- %s", sprintf("[%s]", tables)), collapse = "\n")
+    )
+
+    # 2) per-table schema details
+    detail_lines <- vapply(tables, function(tb) {
+      cols <- DBI::dbListFields(connection, tb)
+      col_bullets <- paste(sprintf("  - %s", sprintf("[%s]", cols)),
+                           collapse = "\n")
+      sprintf("\n#### %s\n%s", sprintf("[%s]", tb), col_bullets)
+    }, character(1))
+
+    meta <- paste0(headline, "\n---\n", paste(detail_lines, collapse = "\n"))
+    # ------------------------------------------------------------------
+
 
     prompt_tmpl <- "
 You are a SQL Database Instructions Expert. Given the following information about the SQL database,
@@ -334,44 +362,93 @@ Avoid these:
 }
 
 # (b) CREATE THE SQL QUERY CODE
-node_create_sql_query_code <- function(model, connection, n_samples, bypass_recommended_steps = FALSE) {
+node_create_sql_query_code <- function(model, connection, n_samples, bypass_recommended_steps = FALSE, verbose = TRUE) {
+
+  `%||%` <- function(a, b) if (!is.null(a)) a else b   # helper
+
+  # ---------- helper: pull SQL from any response ---------------------------
+  grab_sql <- function(txt) {
+    pats <- c("(?s)```sql\\s*(.*?)```", "(?s)```\\s*(.*?)```")
+    for (p in pats) {
+      m <- regexpr(p, txt, perl = TRUE)
+      if (m[1] > 0)
+        return(trimws(sub(p, "\\1", regmatches(txt, m), perl = TRUE)))
+    }
+    trimws(txt)
+  }
+
+  # -------------------------------------------------------------------------
   function(state) {
-    # Display a header if bypassing recommended steps.
-    if (bypass_recommended_steps) {
-      cat("---SQL DATABASE AGENT---\n")
-    }
-    cat("    * CREATE SQL QUERY CODE\n")
-
-    # Retrieve user instructions and recommended steps from state, defaulting to an empty string if not provided.
-    user_instructions <- if (!is.null(state$user_instructions)) state$user_instructions else ""
-    recommended_steps  <- if (!is.null(state$recommended_steps)) state$recommended_steps else ""
-
-    # Use provided metadata if available; otherwise, build metadata summary from the DBI connection.
-    if (!is.null(state$all_sql_database_summary)) {
-      meta <- state$all_sql_database_summary
-    } else {
-      tables <- dbListTables(connection)
-      meta_lines <- c()
-      for (tb in tables) {
-        cols <- dbListFields(connection, tb)
-        meta_lines <- c(meta_lines, paste0("TABLE: ", tb, "\n  COLUMNS: ", paste(cols, collapse = ", ")))
-      }
-      meta <- paste(meta_lines, collapse = "\n\n")
+    if (verbose) {
+      if (bypass_recommended_steps) message("---SQL DATABASE AGENT---")
+      message("    * CREATE SQL QUERY CODE")
     }
 
-    # Define a detailed prompt template that instructs the model to use the proper join type if applicable.
+    user_instructions <- state$user_instructions %||% ""
+    recommended_steps <- state$recommended_steps  %||% ""
+
+    meta <- state$all_sql_database_summary %||% {
+      tables <- DBI::dbListTables(connection)
+
+      headline <- sprintf(
+        "### Available Tables (%d total)\n%s\n",
+        length(tables),
+        paste(sprintf("- [%s]", tables), collapse = "\n")
+      )
+
+      detail_lines <- vapply(tables, function(tb) {
+        cols <- DBI::dbListFields(connection, tb)
+        col_bullets <- paste(sprintf("  - [%s]", cols), collapse = "\n")
+        sprintf("\n#### [%s]\n%s", tb, col_bullets)
+      }, character(1))
+
+      paste0(headline, "\n---\n", paste(detail_lines, collapse = "\n"))
+    }
+
     prompt_tmpl <- "
-You are an SQL Database Coding Expert. Using the details provided about the SQL database, please generate an optimized SQL query that retrieves and processes data strictly according to the user instructions. Your query must strictly adhere to the provided database metadata, including exact table names, column names (including spaces if any), and the specified SQL dialect.
+    You are an SQL Database Coding Expert. Using the details provided about the SQL database,
+    please generate an optimized SQL query that retrieves and processes data strictly according
+    to the user instructions. Your query must strictly adhere to the provided database metadata,
+    including exact table names, column names (including spaces if any), and the specified SQL dialect.
 
-- IMPORTANT: Do NOT use a LIMIT clause unless the user explicitly includes a limit in their instructions.
-- IMPORTANT: Return the SQL code enclosed in triple backticks with 'sql' as the language tag (i.e., ```sql ... ```).
-- IMPORTANT: Provide exactly one complete SQL query without any extra SQL commands.
-- IMPORTANT: Use only the table names and column names exactly as provided in the metadata. Do not reference any tables or columns that are not mentioned. Every table and column in your query must exist in the provided metadata.
-- IMPORTANT: Do NOT create or invent any table or column names that are not found in the provided metadata.
-- IMPORTANT: Strictly follow the SQL dialect described in the metadata.
-- IMPORTANT: If your query involves joining tables, use the appropriate join type (such as INNER JOIN, LEFT JOIN, or RIGHT JOIN) based on the relationships and requirements provided in the metadata or recommended steps.
-- IMPORTANT: Ensure that your query is read-only. Do NOT include any commands that modify data, create, or alter database objects.
-- IMPORTANT: Do NOT include any extraneous text, commentary, or explanations beyond the SQL query itself.
+    - IMPORTANT: Do NOT use a LIMIT clause unless the user explicitly includes a limit in their instructions.
+    - IMPORTANT: Return the SQL code enclosed in triple backticks with 'sql' as the language tag (i.e., ```sql ... ```).
+    - IMPORTANT: Provide exactly one complete SQL query without any extra SQL commands.
+    - IMPORTANT: Use only the table names and column names exactly as provided in the metadata. Do not reference any tables or columns that are not mentioned. Every table and column in your query must exist in the provided metadata.
+    - IMPORTANT: Do NOT create or invent any table or column names that are not found in the provided metadata.
+    - IMPORTANT: Strictly follow the SQL dialect described in the metadata.
+    - IMPORTANT: If your query involves joining tables, use the appropriate join type (such as INNER JOIN, LEFT JOIN, or RIGHT JOIN) based on the relationships and requirements provided in the metadata or recommended steps.
+    - IMPORTANT: Ensure that your query is read-only. Do NOT include any commands that modify data, create, or alter database objects.
+    - IMPORTANT: Do NOT include any extraneous text, commentary, or explanations beyond the SQL query itself.
+
+    -------------------------------------------------------------------------------
+     ### Example metadata block
+
+      ### Available Tables (2 total)
+      - [Customers]
+      - [Orders]
+
+      ---
+        #### [Customers]
+        - [CustomerID]
+      - [CompanyName]
+
+      #### [Orders]
+      - [OrderID]
+      - [CustomerID]
+      - [OrderDate]
+
+      ### Example of a correct query that respects the metadata
+
+      ```sql
+      SELECT [CustomerID], [CompanyName]
+      FROM   [Customers]
+      WHERE  [CustomerID] IN (
+        SELECT [CustomerID]
+        FROM   [Orders]
+        WHERE  [OrderDate] >= '2024-01-01'
+      );
+Now write one complete SQL query that answers the user request, following all rules above.
 
 User Instruction / Question:
 %1$s
@@ -391,56 +468,60 @@ Avoid the following:
 - IMPORTANT: Do not provide any additional commentary or instructions beyond the SQL query.
 "
 
-    # Generate the complete prompt by substituting the placeholders with dynamic values.
     prompt <- sprintf(prompt_tmpl, user_instructions, recommended_steps, meta)
-
-    # Call the model to generate the SQL code.
-    # (Ensure that 'model' is a working function that accepts the prompt string and returns the model's output.)
     sql_code_raw <- model(prompt)
+    draft_sql <- grab_sql(sql_code_raw)
+    #message(draft_sql)
 
-    # Extract the SQL query from the model's output, expecting it to be enclosed in triple backticks tagged with 'sql'.
-    regex_pattern <- "```sql(.*#)```"
-    match_result <- regexpr(regex_pattern, sql_code_raw, perl = TRUE)
+    # --------------- 2) REFINE / FIX TABLE & COLUMN NAMES ---------------
+    refine_prompt <- sprintf(
+      "Please correct the following SQL so that **every** table and column name
+matches the metadata exactly (including [] brackets). Do not add or remove
+tables or columns. Return the fixed query ONLY inside ```sql``` fences.
 
-    if (match_result[1] != -1) {
-      captured_text <- regmatches(sql_code_raw, match_result)
-      sql_query_code <- gsub("```sql|```", "", captured_text)
-      sql_query_code <- trimws(sql_query_code)
-    } else {
-      # Fallback: if markdown formatting is not detected, assume the output is plain SQL.
-      sql_query_code <- trimws(sql_code_raw)
+--- METADATA ---------------------------------------------------
+%s
+----------------------------------------------------------------
+
+--- ORIGINAL QUERY ---------------------------------------------
+```sql
+%s
+----------------------------------------------------------------"
+      , meta, draft_sql)
+
+    refined_reply <- model(refine_prompt)
+    final_sql     <- grab_sql(refined_reply)
+    #message(final_sql)
+
+    if (verbose) {
+      message(sprintf("      draft -> refined SQL length: %d -> %d",
+                      nchar(draft_sql), nchar(final_sql)))
     }
 
-    # Remove any stray triple backticks remaining.
-    sql_query_code <- gsub("```+", "", sql_query_code)
-
-    # **** NEW PART: Clean up potential issues.
-    # Remove any standalone 'sql' token (to avoid potential issues in SQLite).
-    sql_query_code <- gsub("\\bsql\\b", "", sql_query_code, ignore.case = TRUE)
-    # Collapse multiple whitespace characters into a single space for cleaner formatting.
-    sql_query_code <- gsub("\\s+", " ", sql_query_code)
-    sql_query_code <- trimws(sql_query_code)
-    # **** END NEW PART ****
-
-    # If the model mistakenly returns MySQL-specific syntax (like "SHOW TABLES;"), replace it with an SQLite-safe query.
-    if (grepl("(#i)show\\s+tables", sql_query_code, perl = TRUE)) {
-      sql_query_code <- "SELECT name FROM sqlite_master WHERE type='table';"
+    # quick override for generic SHOW TABLES queries
+    if (grepl("(?i)show\\s+tables", final_sql, perl = TRUE)) {
+      final_sql <- "SELECT name FROM sqlite_master WHERE type='table';"
     }
 
-    cat("    * CREATE R FUNCTION TO RUN SQL CODE\n")
-    # Build an R function snippet that will execute the generated SQL code on a DBI connection.
-    r_func <- sprintf("
-sql_database_pipeline <- function(connection) {
+    # --------------------- build R wrapper -------------------------------
+    if (verbose) message("    * CREATE R FUNCTION TO RUN SQL CODE")
+
+    sql_escaped <- gsub('"', '\\\\\"', final_sql)
+
+    r_func <- sprintf(
+      "sql_database_pipeline <- function(connection) {
   library(DBI)
   query <- \"%s\"
-  df <- DBI::dbGetQuery(connection, query)
-  df
-}
-", sql_query_code)
+  DBI::dbGetQuery(connection, query)
+}", sql_escaped)
 
-    # Return a list containing the cleaned SQL query and the R function snippet.
+    # parse-check the R wrapper; stop early if malformed
+    tryCatch(parse(text = r_func), error = function(e) {
+      warning(sprintf("Generated R wrapper did not parse: %s", e$message), call. = FALSE)
+    })
+
     list(
-      sql_query_code             = sql_query_code,
+      sql_query_code             = final_sql,
       sql_database_function      = r_func,
       sql_database_function_name = "sql_database_pipeline"
     )
@@ -450,15 +531,34 @@ sql_database_pipeline <- function(connection) {
 # (c) EXECUTE CODE
 #    -> node_func_execute_agent_from_sql_connection (already defined above).
 
-# (d) FIX CODE: More robust to partial or truncated LLM responses.
-node_fix_sql_database_code <- function(model) {
+# (d) FIX CODE    now with bracket-validation & autocorrect
+# ---------------------------------------------------------------------------
+# (d) FIX CODE - robust extraction, bracket validation & safe fallback
+# ---------------------------------------------------------------------------
+node_fix_sql_database_code <- function(model, connection, verbose = TRUE) {
+
+  first_ok <- function(x) {
+    for (v in x) if (!is.na(v) && nzchar(v)) return(v)
+    NULL
+  }
+
+  closest_name <- function(bad, candidates, max_dist = 2) {
+    d <- utils::adist(tolower(bad), tolower(candidates))
+    w <- which.min(d)
+    if (d[w] <= max_dist) candidates[w] else NA_character_
+  }
+
+  # -------------------------------------------------------------------------
   function(state) {
-    cat("    * FIX AGENT CODE\n")
-    cat("      retry_count:", state$retry_count, "\n")
+    if (verbose) {
+      message("    * FIX AGENT CODE")
+      message("      retry_count:", state$retry_count)
+    }
 
     code_snippet  <- state$sql_database_function
     error_message <- state$sql_database_error
 
+    # ---------- build prompt (text unchanged) ------------------------------
     prompt_template <- "
 You are an SQL Database Agent code fixer. Your task is to fix the R function sql_database_pipeline(connection).
 The function is currently broken and needs to be fixed.
@@ -480,50 +580,126 @@ Broken code:
 Last Known Error:
 {error}
 "
-  prompt <- gsub("\\{code_snippet\\}", code_snippet, prompt_template)
-  prompt <- gsub("\\{error\\}",        error_message, prompt)
+  prompt <- sub("\\{code_snippet\\}", code_snippet, prompt_template, fixed = TRUE)
+  prompt <- sub("\\{error\\}",        error_message, prompt,        fixed = TRUE)
 
-  # Call the LLM
   response <- model(prompt)
 
-  # 1) Attempt triple backtick extraction (```r, ```R, or ```).
-  code_pattern <- "```[rR]#\\s*(.*#)```"
-  match <- regexpr(code_pattern, response, perl = TRUE)
+  # ---------- extract wrapper ------------------------------------------
+  fence_r   <- regmatches(response,
+                          regexpr("(?s)```[rR]\\s*(.*?)```", response, perl = TRUE))
+  fence_any <- regmatches(response,
+                          regexpr("(?s)```\\s*(.*?)```",      response, perl = TRUE))
+  naked     <- regmatches(response,
+                          regexpr("(?s)(sql_database_pipeline\\s*<-\\s*function\\s*\\(connection\\).*?\\})",
+                                  response, perl = TRUE))
 
-  if (match[1] != -1) {
-    # Found code in triple backticks
-    captured_code <- regmatches(response, match)
-    # remove triple backticks
-    extracted <- gsub("```[rR]#\\s*|```", "", captured_code)
-    new_code   <- trimws(extracted)
-  } else {
-    # 2) If no triple-backtick block, look for the function definition pattern:
-    func_pattern <- "sql_database_pipeline\\s*<-\\s*function\\s*\\(connection\\)\\s*\\{.*#\\}"
-    match2 <- regexpr(func_pattern, response, perl = TRUE, ignore.case = FALSE)
+  candidate <- first_ok(list(
+    gsub("(?s)```[rR]\\s*|```", "", fence_r,   perl = TRUE),
+    gsub("(?s)```\\s*|```",      "", fence_any, perl = TRUE),
+    naked
+  ))
 
-    if (match2[1] != -1) {
-      captured_func <- regmatches(response, match2)
-      new_code <- captured_func
-    } else {
-      # Instead of stopping, WARN and return the old snippet so we don't crash the agent.
-      warning("Could not extract any valid R code from LLM response. Returning original snippet instead.")
-      new_code <- code_snippet
+  if (is.null(candidate)) {
+    warning("No function found in fixer response - reverting.")
+    return(list(sql_database_function = code_snippet,
+                sql_database_error    = NULL,
+                retry_count           = state$retry_count + 1))
+  }
+  candidate <- trimws(gsub("```+", "", candidate))
+
+  # ---- syntax check ----------------------------------------------------
+  ok <- TRUE
+  tryCatch(parse(text = candidate), error = function(e) ok <<- FALSE)
+  if (!ok) {
+    warning("Fixed wrapper fails to parse - reverting.")
+    return(list(sql_database_function = code_snippet,
+                sql_database_error    = NULL,
+                retry_count           = state$retry_count + 1))
+  }
+
+  # ---------------------------------------------------------------------
+  # BRACKET VALIDATION / AUTOCORRECT
+  # ---------------------------------------------------------------------
+  # 1) harvest SQL string
+  qry_pat <- 'query\\s*<-\\s*["\'](.*?)["\']'
+  q_match <- regmatches(candidate, regexpr(qry_pat, candidate, perl = TRUE))
+  if (!length(q_match)) {      # nothing to validate
+    return(list(sql_database_function = candidate,
+                sql_database_error    = NULL,
+                retry_count           = state$retry_count + 1))
+  }
+  sql_query <- gsub(qry_pat, "\\1", q_match, perl = TRUE)
+
+  # 2) real table names from saved metadata (fall back to DB if absent)
+  real_tbls <- if (!is.null(state$all_sql_database_summary)) {
+    unique(gsub("\\[(.*?)\\]", "\\1",
+                regmatches(state$all_sql_database_summary,
+                           gregexpr("\\[(.*?)\\]", state$all_sql_database_summary,
+                                    perl = TRUE))[[1]]))
+  } else DBI::dbListTables(connection)
+
+  # 3) scan identifiers after FROM / JOIN
+  tbl_pattern <- "(?i)(?:from|join)\\s+(?:\\[([^]]+)\\]|([A-Za-z0-9_ ]+))"
+  raw <- trimws(gsub(tbl_pattern, "\\1\\2",
+                     unlist(regmatches(sql_query,
+                                       gregexpr(tbl_pattern, sql_query, perl = TRUE))),
+                     perl = TRUE))
+
+  found <- vapply(raw, function(tok) {
+    if (grepl("^\\[.*\\]$", tok)) sub("^\\[(.*)\\]$", "\\1", tok)
+    else strsplit(tok, "\\s+")[[1]][1]
+  }, character(1))
+
+  # 4) autocorrect & bracket missing names
+  for (nm in found) {
+    if (!(tolower(nm) %in% tolower(real_tbls))) {
+      fix <- closest_name(nm, real_tbls, 2)
+      if (!is.na(fix)) {
+        if (verbose) message(sprintf("      autocorrect table: %s -> %s", nm, fix))
+        sql_query <- gsub(sprintf("(?i)\\b%s\\b", nm),
+                          sprintf("[%s]", fix),
+                          sql_query, perl = TRUE)
+      }
+    } else {  # ensure brackets if they were missing
+      sql_query <- gsub(sprintf("(?i)\\b%s\\b", nm),
+                        sprintf("[%s]", nm),
+                        sql_query, perl = TRUE)
     }
   }
 
-  # Remove any leftover triple backticks inside
-  new_code <- gsub("```+", "", new_code)
+  # 5) fail if anything still unknown
+  still_bad <- setdiff(tolower(found), tolower(real_tbls))
+  if (length(still_bad)) {
+    warning(sprintf("Unknown table(s) remain: %s - reverting.",
+                    paste(still_bad, collapse = ", ")))
+    return(list(sql_database_function = code_snippet,
+                sql_database_error    = NULL,
+                retry_count           = state$retry_count + 1))
+  }
 
-  new_retry_val <- state$retry_count + 1
+  # ---------------------------------------------------------------------
+  # re-embed the cleaned SQL, escaping any "
+  # ---------------------------------------------------------------------
+  sql_escaped <- gsub('"', '\\"', sql_query)
+  candidate <- sub(qry_pat,
+                   sprintf('query <- "%s"', sql_escaped),
+                   candidate, perl = TRUE)
 
-  out <- list(
-    sql_database_function = new_code,
-    sql_database_error    = NULL,      # we reset to NULL (the new snippet may or may not work)
-    retry_count           = new_retry_val
+  # final parse check
+  tryCatch(parse(text = candidate), error = function(e) {
+    warning("Wrapper broke after reinsertion - reverting.")
+    candidate <<- code_snippet
+  })
+
+  list(
+    sql_database_function = candidate,
+    sql_database_error    = NULL,
+    retry_count           = state$retry_count + 1
   )
-  out
   }
 }
+
 
 
 ###############################################################################
@@ -543,14 +719,15 @@ Last Known Error:
 #' @param human_validation Whether to include a human review node.
 #' @param bypass_recommended_steps If TRUE, skip the step recommendation node.
 #' @param bypass_explain_code If TRUE, skip the final explanation step.
-#'
+#' @param verbose Logical indicating whether to print progress messages (default: TRUE).
 #' @return A compiled SQL agent function that runs via a state machine (graph execution).
 #' @examples
 #' \dontrun{
 #' agent <- build_sql_agent(
 #'   model = call_llm,
 #'   connection = DBI::dbConnect(RSQLite::SQLite(), ":memory:"),
-#'   human_validation = FALSE
+#'   human_validation = FALSE,
+#'   verbose = TRUE
 #' )
 #' state <- list(user_instructions = "Which Categories bring in the highest total revenue# Hint: ...")
 #' agent(state)
@@ -558,14 +735,14 @@ Last Known Error:
 #' @export
 NULL
 
-
 build_sql_agent <- function(
     model,
     connection,
     n_samples             = 10,
-    human_validation     = FALSE,
+    human_validation      = FALSE,
     bypass_recommended_steps = FALSE,
-    bypass_explain_code   = FALSE
+    bypass_explain_code   = FALSE,
+    verbose               = TRUE
 ) {
 
   # Create the graph
@@ -575,13 +752,13 @@ build_sql_agent <- function(
   if (!bypass_recommended_steps) {
     workflow$add_node(
       "recommend_sql_steps",
-      node_recommend_sql_steps(model, connection, n_samples)
+      node_recommend_sql_steps(model, connection, n_samples, verbose)
     )
   }
 
   workflow$add_node(
     "create_sql_query_code",
-    node_create_sql_query_code(model, connection, n_samples, bypass_recommended_steps)
+    node_create_sql_query_code(model, connection, n_samples, bypass_recommended_steps, verbose)
   )
 
   workflow$add_node(
@@ -597,14 +774,15 @@ build_sql_agent <- function(
         post_processing     = function(df) {
           if (is.data.frame(df)) as.list(df) else df
         },
-        error_message_prefix = "An error occurred executing the SQL pipeline: "
+        error_message_prefix = "An error occurred executing the SQL pipeline: ",
+        verbose = verbose
       )
     }
   )
 
   workflow$add_node(
     "fix_sql_database_code",
-    node_fix_sql_database_code(model)
+    node_fix_sql_database_code(model,connection, verbose)
   )
 
   if (human_validation) {
@@ -638,7 +816,8 @@ build_sql_agent <- function(
           explanation_prompt_template = "
 Explain the SQL steps in this function. Keep it concise:\n\n{code}
 ",
-          success_prefix = "# SQL Database Agent:\n\n"
+          success_prefix = "# SQL Database Agent:\n\n",
+          verbose = verbose
         )
       }
     )
@@ -660,7 +839,6 @@ Explain the SQL steps in this function. Keep it concise:\n\n{code}
   workflow$add_edge("create_sql_query_code", "execute_sql_database_code")
   workflow$add_edge("fix_sql_database_code", "execute_sql_database_code")
 
-  # Condition: if there's an error & we haven't retried too many times
   error_and_can_retry <- function(s) {
     err  <- s$sql_database_error
     retr <- s$retry_count
@@ -700,7 +878,6 @@ Explain the SQL steps in this function. Keep it concise:\n\n{code}
         )
       )
     } else {
-      # if error => fix, else => end
       workflow$add_conditional_edges(
         "execute_sql_database_code",
         function(s) {

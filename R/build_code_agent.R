@@ -1,45 +1,49 @@
 # ------------------------------------------------------------------------------
-# R Code Generation Agent using LLM
-# ------------------------------------------------------------------------------
-
-# ------------------------------------------------------------------------------
 #' Build an R Code Generation Agent
 #'
-#' This function constructs an LLM-based agent for generating, debugging,
-#' explaining, or optimizing R code using a structured task-specific prompt.
-#'
+#' Constructs an LLM-based agent for generating, debugging, explaining, or
+#' optimizing R code using structured prompts. The agent handles retries and
+#' provides comprehensive code assistance.
 #'
 #' @name build_code_agent
 #' @param llm A function that accepts a character prompt and returns an LLM response.
-#' @param system_prompt Optional system-level prompt with behavior instructions.
-#' @param user_input The user's input task/query (e.g., "Write a function to filter NA values").
-#' @param n_tries Number of attempts to retry the LLM call if it fails.
-#' @param backoff Seconds to wait between retries.
+#' @param system_prompt Optional system-level instructions for the agent's behavior.
+#' @param user_input The user's task/query (e.g., "Write function to filter NAs").
+#' @param max_tries Maximum number of attempts for LLM calls (default: 3).
+#' @param backoff Seconds to wait between retries (default: 2).
+#' @param verbose Logical controlling progress messages (default: TRUE).
 #'
-#' @return A list containing the user input, the system prompt, and the LLM response.
+#' @return A list containing:
+#' \itemize{
+#'   \item input - The user's original query
+#'   \item llm_response - The processed LLM response
+#'   \item system_prompt - The system instructions used
+#'   \item success - Logical indicating if call succeeded
+#'   \item attempts - Number of tries made
+#' }
+#'
 #' @examples
 #' \dontrun{
 #' agent <- build_code_agent(
 #'   llm = call_llm,
-#'   user_input = "Write an R function that removes NA rows from a dataframe"
+#'   user_input = "Write function to remove NA rows from dataframe",
+#'   verbose = FALSE
 #' )
-#' cat(agent$llm_response)
 #' }
 #' @export
 NULL
-
 
 build_code_agent <- function(
     llm,
     system_prompt = NULL,
     user_input,
-    n_tries = 3,
-    backoff = 2
+    max_tries = 3,
+    backoff = 2,
+    verbose = TRUE
 ) {
-  cat("=== STARTING CODER AGENT ===\n")
+  if (verbose) message("=== STARTING CODER AGENT ===")
 
-
-  # 1. Packages
+  # Check for suggested packages
   glue     <- get_suggested("glue")
   tidyr    <- get_suggested("tidyr")
   stringr  <- get_suggested("stringr")
@@ -84,38 +88,44 @@ RESPONSE FORMAT:
 Always follow best R practices, write clear and robust code, and be helpful."
   }
 
-  # Compose the full prompt
-  full_prompt <- sprintf("%s\n\nUser Query:\n%s", system_prompt, user_input)
+  # Compose prompt
+  full_prompt <- sprintf("%s\n\nUSER TASK:\n%s", system_prompt, user_input)
 
-  # Call LLM with retries
-  attempt <- 1L
-  repeat {
-    result <- tryCatch(
-      llm(prompt = full_prompt),
-      error = function(e) e
-    )
+  # LLM call with retry logic
+  response <- NULL
+  error_message <- NULL
+  success <- FALSE
 
-    # success#
-    if (!inherits(result, "error")) break
+  for (attempt in seq_len(max_tries)) {
+    if (verbose) message(sprintf("Attempt %d/%d", attempt, max_tries))
 
-    # failure and out of tries#
-    if (attempt >= n_tries) {
-      result <- paste("LLM call failed:", result$message)
+    attempt_result <- tryCatch({
+      llm_response <- llm(prompt = full_prompt)
+
+      if (is.null(llm_response) || nchar(trimws(llm_response)) == 0) {
+        stop("Empty response received from LLM.")
+      }
+      llm_response
+    }, error = function(e) {
+      if (verbose) warning(sprintf("Attempt %d failed: %s", attempt, e$message))
+      error_message <<- e$message  # store error separately
+      if (attempt < max_tries) Sys.sleep(backoff)
+      NULL  # return NULL explicitly
+    })
+
+    if (!is.null(attempt_result)) {
+      response <- attempt_result
+      success <- TRUE
       break
     }
-
-    # failure but we can retry
-    attempt <- attempt + 1L
-    Sys.sleep(backoff)
   }
 
-  # -------------------------------------------------------------------
-  # 4. Return ----------------------------------------------------------
-  # -------------------------------------------------------------------
+  # Return structured
   list(
-    input         = user_input,
-    llm_response  = result,
-    system_prompt = system_prompt
+    input = user_input,
+    llm_response = if (success) response else paste("LLM call failed:", error_message),
+    system_prompt = system_prompt,
+    success = success,
+    attempts = attempt
   )
 }
-

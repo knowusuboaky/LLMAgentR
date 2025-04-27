@@ -44,7 +44,7 @@ StateGraph <- function() {
   END_NODE_NAME <- "__end__"
 
   graph_env$compile <- function(checkpointer = NULL) {
-    function(state) {
+    function(state, verbose = FALSE) {
       current_node <- if (!is.null(state$current_node)) {
         state$current_node
       } else {
@@ -57,8 +57,12 @@ StateGraph <- function() {
           stop(sprintf("Node '%s' not found in graph.", current_node))
         }
 
-        # Execute node
-        result <- node_obj$func(state)
+        # Execute node with verbose parameter if the function accepts it
+        if ("verbose" %in% names(formals(node_obj$func))) {
+          result <- node_obj$func(state, verbose = verbose)
+        } else {
+          result <- node_obj$func(state)
+        }
 
         # Merge returned list elements
         if (is.list(result)) {
@@ -67,7 +71,7 @@ StateGraph <- function() {
           }
         }
 
-        # If there's a Command-like object with goto & update:
+        # Handle Command-like objects with goto & update
         if (!is.null(result$goto)) {
           next_node <- result$goto
           if (is.list(result$update)) {
@@ -88,14 +92,14 @@ StateGraph <- function() {
           }
         }
 
-        # If no direct goto, look for edges
+        # Look for edges if no direct goto
         edges_from_node <- Filter(function(e) e$from == current_node, graph_env$edges)
         if (length(edges_from_node) == 0) {
           current_node <- END_NODE_NAME
           break
         }
 
-        # If exactly 1 edge and no condition
+        # Handle single unconditional edge
         if (length(edges_from_node) == 1 && is.null(edges_from_node[[1]]$condition)) {
           current_node <- edges_from_node[[1]]$to
           if (identical(current_node, END_NODE_NAME)) break
@@ -103,7 +107,7 @@ StateGraph <- function() {
           next
         }
 
-        # Otherwise we have conditional edges
+        # Handle conditional edges
         chosen_label <- edges_from_node[[1]]$condition(state)
 
         edge_matched <- NULL
@@ -142,7 +146,7 @@ StateGraph <- function() {
 ###############################################################################
 
 interrupt <- function(value) {
-  cat("\n", value, "\n")
+  message("\n", value, "\n")
   readline("Enter your response: ")
 }
 
@@ -416,21 +420,21 @@ forecast_ts <- function(
   future_tbl        <- full_data_tbl %>% filter(is.na(value_col))
 
   splits <- data_prepared_tbl %>%
-    time_series_split(
+    timetk::time_series_split(
       date_var   = date_col,
       assess     = min(horizon, floor(nrow(data_prepared_tbl) * 0.20)),
       cumulative = TRUE
     )
 
   # -- 7. Recipes --------------------------------------------------------------
-  recipe_spec_1 <- recipe(value_col ~ ., training(splits)) %>%
-    step_rm(matches("^$")) %>%  # Remove unnamed columns
-    step_timeseries_signature(date_col) %>%
-    step_rm(matches("(.iso$)|(.xts$)|(day)|(hour)|(minute)|(second)|(am.pm)")) %>%
-    step_zv(all_predictors()) %>%  # This removes zero-variance predictors
-    step_normalize(all_numeric_predictors(), -all_outcomes()) %>%
-    step_mutate(date_col_week = factor(date_col_week, ordered = TRUE)) %>%
-    step_dummy(all_nominal(), one_hot = TRUE)
+  recipe_spec_1 <- recipes::recipe(value_col ~ ., training(splits)) %>%
+    recipes::step_rm(matches("^$")) %>%  # Remove unnamed columns
+    timetk::step_timeseries_signature(date_col) %>%
+    recipes::step_rm(matches("(.iso$)|(.xts$)|(day)|(hour)|(minute)|(second)|(am.pm)")) %>%
+    recipes::step_zv(all_predictors()) %>%  # This removes zero-variance predictors
+    recipes::step_normalize(all_numeric_predictors(), -all_outcomes()) %>%
+    recipes::step_mutate(date_col_week = factor(date_col_week, ordered = TRUE)) %>%
+    recipes::step_dummy(all_nominal(), one_hot = TRUE)
 
   recipe_spec_2 <- recipe_spec_1 %>% update_role(date_col, new_role = "ID")
 
@@ -439,54 +443,54 @@ forecast_ts <- function(
 
   ## 8.1 Prophet
   wflw_fit_prophet <- workflow() %>%
-    add_model(
+    workflows::add_model(
       prophet_reg(
         seasonality_daily  = FALSE,
         seasonality_weekly = ifelse(horizon >= 7, TRUE, FALSE),
         seasonality_yearly = TRUE
       ) %>% set_engine("prophet") %>% set_mode("regression")
     ) %>%
-    add_recipe(recipe_spec_1) %>%
+    workflows::add_recipe(recipe_spec_1) %>%
     fit(training(splits))
   model_list <- c(model_list, list(wflw_fit_prophet))
 
   ## 8.2 XGBoost
   wflw_fit_xgboost <- workflow() %>%
-    add_model(
+    workflows::add_model(
       boost_tree() %>% set_engine("xgboost") %>% set_mode("regression")
     ) %>%
-    add_recipe(recipe_spec_2) %>%
+    workflows::add_recipe(recipe_spec_2) %>%
     fit(training(splits))
   model_list <- c(model_list, list(wflw_fit_xgboost))
 
   ## 8.3 Random Forest
   wflw_fit_rf <- workflow() %>%
-    add_model(
+    workflows::add_model(
       rand_forest() %>% set_engine("ranger") %>% set_mode("regression")
     ) %>%
-    add_recipe(recipe_spec_2) %>%
+    workflows::add_recipe(recipe_spec_2) %>%
     fit(training(splits))
   model_list <- c(model_list, list(wflw_fit_rf))
 
   ## 8.4 SVM
   wflw_fit_svm <- workflow() %>%
-    add_model(
+    workflows::add_model(
       svm_rbf() %>% set_engine("kernlab") %>% set_mode("regression")
     ) %>%
-    add_recipe(recipe_spec_2) %>%
+    workflows::add_recipe(recipe_spec_2) %>%
     fit(training(splits))
   model_list <- c(model_list, list(wflw_fit_svm))
 
   ## 8.5 Prophet Boost
   wflw_fit_prophet_boost <- workflow() %>%
-    add_model(
+    workflows::add_model(
       prophet_boost(
         seasonality_daily  = FALSE,
         seasonality_weekly = ifelse(horizon >= 7, TRUE, FALSE),
         seasonality_yearly = TRUE
       ) %>% set_engine("prophet_xgboost") %>% set_mode("regression")
     ) %>%
-    add_recipe(recipe_spec_1) %>%
+    workflows::add_recipe(recipe_spec_1) %>%
     fit(training(splits))
   model_list <- c(model_list, list(wflw_fit_prophet_boost))
 
@@ -499,7 +503,7 @@ forecast_ts <- function(
 
   # -- 10. Forecast ------------------------------------------------------------
   forecast_tbl <- ensemble_refit %>%
-    modeltime_forecast(
+    modeltime::modeltime_forecast(
       new_data    = future_tbl,
       actual_data = data_prepared_tbl,
       keep_data   = TRUE,
@@ -529,7 +533,6 @@ forecast_ts <- function(
 #' @export
 check_forecasting_dependencies <- function() {
   # Base / utils
-  installed.packages <- get_suggested("utils", "installed.packages")
   capture.output <- get_suggested("utils", "capture.output")
   head <- get_suggested("base", "head")
   id <- get_suggested("base", "id")  # fallback placeholder
@@ -742,54 +745,53 @@ create_coding_agent_graph <- function(
 ## NODE FUNCTIONS FOR TIME SERIES FORECASTING
 ###############################################################################
 
-node_recommend_forecasting_steps <- function(model) {
+node_recommend_forecasting_steps <- function(model, verbose = FALSE) {
   function(state) {
 
-    # -- 1. Helper Functions ----------------------------------------------------
+    # -- 1. Helper Functions
     `%||%` <- function(a, b) {
-      # -- 1. Input Validation ----------------------------------------------------
+      # -- 1. Input Validation
       if (missing(a) || missing(b)) {
         stop("Both arguments must be provided to the %||% operator")
       }
 
-      # -- 2. Check for NULL ------------------------------------------------------
+      # -- 2. Check for NULL --
       if (is.null(a)) return(b)
 
-      # -- 3. Handle Zero-Length Vectors ------------------------------------------
+      # -- 3. Handle Zero-Length Vectors
       if (length(a) == 0) return(b)
 
-      # -- 4. Check for Empty Strings (with whitespace) ---------------------------
+      # -- 4. Check for Empty Strings (with whitespace)
       if (is.character(a)) {
         if (all(trimws(a) == "")) return(b)
       }
 
-      # -- 5. Handle Special Cases ------------------------------------------------
+      # -- 5. Handle Special Cases ------
       if (is.na(a) && !is.nan(a)) return(b)  # NA (but not NaN)
       if (identical(a, logical(0))) return(b)
       if (identical(a, numeric(0))) return(b)
       if (identical(a, integer(0))) return(b)
       if (identical(a, character(0))) return(b)
 
-      # -- 6. Handle Data Frames and Matrices -------------------------------------
+      # -- 6. Handle Data Frames and Matrices ----------
       if (is.data.frame(a) || is.matrix(a)) {
         if (nrow(a) == 0 || ncol(a) == 0) return(b)
       }
 
-      # -- 7. Handle Lists --------------------------------------------------------
+      # -- 7. Handle Lists ----
       if (is.list(a)) {
         if (length(a) == 0) return(b)
         if (all(sapply(a, is.null))) return(b)
       }
 
-      # -- 8. Default Case --------------------------------------------------------
+      # -- 8. Default Case ----
       return(a)
     }
-    # -- 2. Console Output -----------------------------------------------------
-    cat("--- TIME SERIES FORECASTING AGENT ----\n")
-    cat("    * RECOMMEND FORECASTING STEPS\n\n")
+    # -- 2. Console Output -
+    if (verbose) message("--- TIME SERIES FORECASTING AGENT ----")
+    if (verbose) message("    * RECOMMEND FORECASTING STEPS\n")
 
-
-    # -- 4. Data Preparation ---------------------------------------------------
+    # -- 4. Data Preparation ---------
     if (is.data.frame(state$data_raw)) {
       df <- state$data_raw
     } else if (is.list(state$data_raw)) {
@@ -798,12 +800,12 @@ node_recommend_forecasting_steps <- function(model) {
       stop("state$data_raw must be a data.frame or list convertible to data.frame")
     }
 
-    # -- 5. Input Collection ---------------------------------------------------
+    # -- 5. Input Collection ---------
     user_instructions <- state$user_instructions %||% ""
     previous_steps <- state$recommended_steps %||% ""
     all_datasets_summary <- get_dataframe_summary(df, skip_stats = TRUE)
 
-    # -- 6. Prompt Construction ------------------------------------------------
+    # -- 6. Prompt Construction ------
     prompt <- sprintf(
       "You are the **Chief Forecasting Supervisor** overseeing the initial scoping of a time-series forecasting project. Your job is to define a **clear, rigorous forecasting blueprint**, referencing two pre-implemented utility functions:
 
@@ -857,7 +859,7 @@ Write a structured, professional-grade **FORECASTING BLUEPRINT** based on the us
 
 4. FUNCTION ARGUMENT MAP
    | `forecast_ts()` Argument | Value                     |
-   |--------------------------|---------------------------|
+   |--------------------------||
    | data                     | <data frame name>         |
    | value                    | <Target variable column>  |
    | date                     | <Date column>             |
@@ -895,7 +897,7 @@ Look for it carefully. If not explicitly provided, default to `'ALL GROUPS'`.**
       )
     }
 
-    # -- 9. Return Updated State -----------------------------------------------
+    # -- 9. Return Updated State -----
     list(
       recommended_steps = paste0("\nRecommended Forecasting Steps:\n", trimws(steps)),
       all_datasets_summary = all_datasets_summary,
@@ -923,8 +925,8 @@ node_create_forecasting_code <- function(model, mode, line_width, bypass_recomme
     `%||%` <- function(a, b) if (!is.null(a) && !identical(a, "")) a else b
 
     # Console banner
-    if (bypass_recommended_steps) cat("---TIME SERIES FORECASTING AGENT----\n")
-    cat("    * CREATE FORECASTING CODE\n")
+    if (bypass_recommended_steps) message("---TIME SERIES FORECASTING AGENT----")
+    message("    * CREATE FORECASTING CODE")
 
     # 1 # Gather data summary & instructions -
     if (bypass_recommended_steps) {
@@ -1054,29 +1056,33 @@ Your task: **extract five forecasting parameters** from the user's input and dat
   }
 }
 
-node_execute_forecasting_code <- function(state) {
-  cat("    * EXECUTING FORECASTING CODE\n")
+node_execute_forecasting_code <- function(state, verbose = FALSE) {
+  if (verbose) message("    * EXECUTING FORECASTING CODE")
 
-  # 1. Package Management
+  # Define required packages
   required_packages <- c(
-    "xfun", "dplyr", "rlang", "lubridate", "tibble", "tidyr", "tidymodels",
-    "modeltime", "modeltime.ensemble", "modeltime.resample", "xfun",
-    "timetk", "forcats", "recipes", "parsnip", "workflows", "rsample",
-    "furrr", "prophet", "ranger", "kernlab", "xgboost", "jsonlite"
+    "dplyr", "rlang", "lubridate", "tibble", "tidyr", "tidymodels",
+    "modeltime", "modeltime.ensemble", "timetk", "forcats", "recipes",
+    "parsnip", "workflows", "rsample", "prophet", "ranger", "kernlab",
+    "xgboost", "jsonlite"
   )
 
-  missing_pkgs <- setdiff(required_packages, rownames(installed.packages()))
+  # Check for missing packages using requireNamespace
+  missing_pkgs <- required_packages[!vapply(required_packages, requireNamespace, logical(1), quietly = TRUE)]
+
   if (length(missing_pkgs) > 0) {
-    install.packages(missing_pkgs, quiet = TRUE,
-                     repos = "https://cloud.r-project.org")
+    if (verbose) message("Missing packages: ", paste(missing_pkgs, collapse = ", "))
+    return(list(forecasting_error = paste("Missing required packages:", paste(missing_pkgs, collapse = ", "))))
   }
+
+  # Load packages silently
   suppressPackageStartupMessages({
     invisible(lapply(required_packages, require, character.only = TRUE))
   })
 
-  #  2. Data Preparation
+  # 2. Data Preparation
   if (is.null(state$data_raw)) {
-    stop("No data available in state$data_raw")
+    return(list(forecasting_error = "No data available in state$data_raw"))
   }
 
   df <- if (is.data.frame(state$data_raw)) {
@@ -1084,13 +1090,13 @@ node_execute_forecasting_code <- function(state) {
   } else if (is.list(state$data_raw)) {
     as.data.frame(state$data_raw)
   } else {
-    stop("Unsupported data format in state$data_raw")
+    return(list(forecasting_error = "Unsupported data format in state$data_raw"))
   }
 
   # 3. Parameter Validation
   params <- state$forecasting_params
   if (is.null(params)) {
-    stop("Missing forecasting parameters in state$forecasting_params")
+    return(list(forecasting_error = "Missing forecasting parameters in state$forecasting_params"))
   }
 
   validate_parameters <- function(params, df) {
@@ -1124,8 +1130,7 @@ node_execute_forecasting_code <- function(state) {
   tryCatch(
     validate_parameters(params, df),
     error = function(e) {
-      state$forecasting_error <<- paste("Parameter validation failed:", e$message)
-      return(state)
+      return(list(forecasting_error = paste("Parameter validation failed:", e$message)))
     }
   )
 
@@ -1139,7 +1144,6 @@ node_execute_forecasting_code <- function(state) {
     conf_level= params$params_conf_level
   )
   forecast_args <- forecast_args[!sapply(forecast_args, is.null)]
-
 
   result <- suppressWarnings(
     tryCatch({
@@ -1168,63 +1172,80 @@ node_execute_forecasting_code <- function(state) {
         }
       )
 
-
       list(forecast_data = fcst, forecast_plot = plot_obj)
     }, error = function(e) {
-      state$forecasting_error <<- paste("Forecast execution failed:", e$message)
-      return(state)
+      return(list(forecasting_error = paste("Forecast execution failed:", e$message)))
     })
   )
 
-
   # 5. Return Updated State
-  if (!is.null(state$forecasting_error)) {
-    return(state)
+  if (!is.null(result$forecasting_error)) {
+    return(list(forecasting_error = result$forecasting_error))
   }
 
-  state$forecasting_data <- result$forecast_data
-  state$forecasting_result <- result$forecast_plot
-  state$execution_success <- TRUE
-  state$timestamp <- Sys.time()
-
-  # Clean up large objects
-  state$forecasting_error <- NULL
-  state$retry_count <- NULL
-
-  state
+  list(
+    forecasting_data = result$forecast_data,
+    forecasting_result = result$forecast_plot,
+    execution_success = TRUE,
+    timestamp = Sys.time()
+  )
 }
 
 node_fix_forecasting_code <- function(model) {
   function(state) {
-    cat("    * FIX FORECASTING PARAMETERS\n")
-    cat("      retry_count:", state$retry_count, "\n")
+    message("    * FIX FORECASTING PARAMETERS")
+    message("      retry_count:", state$retry_count)
 
-    # Get error context and original parameters
+    # Get context
     error_message <- state$forecasting_error
     prev_params <- state$forecasting_params
     data_summary <- state$all_datasets_summary
+    user_instructions <- state$user_instructions
 
     prompt <- sprintf(
-      "Fix time series forecasting parameters based on error. Return JSON with:
-1. params_value (numeric column)
-2. params_date (date column)
-3. params_group (grouping column or NULL)
-4. params_horizon (integer >=1)
-5. params_conf_level (between 0.80 and 0.99)
+      "You are a forecasting quality assurance specialist. Analyze the failed forecast attempt and suggest corrected parameters.
 
-RULES:
-- Use EXACT column names from data summary
-- Horizon must be appropriate for data frequency
+      # CRITICAL REQUIREMENTS
+      1. PRESERVE USER INTENT from original instructions
+      2. Only modify parameters that caused the error
+      3. Maintain consistency with the data structure
 
-ERROR: %s
-DATA SUMMARY: %s
-PREVIOUS PARAMS: %s
+      # CONTEXT
+      USER REQUEST: '%s'
 
-Return ONLY valid JSON with corrected parameters:",
+      ERROR MESSAGE: '%s'
+
+      DATA STRUCTURE:
+      %s
+
+      PREVIOUS PARAMETERS:
+      %s
+
+      # FIXING RULES
+      - Keep value/date columns UNLESS they caused the error
+      - Only remove grouping if absolutely necessary
+      - Adjust horizon algorithmically:
+        * If date error: set to 1 temporarily
+        * If memory error: reduce by 50%%
+        * Else: keep original
+      - Confidence: Only adjust if outside 0.8-0.99 range
+
+      # OUTPUT FORMAT
+      Return ONLY this JSON structure with your fixes:
+      {
+        \"params_value\": \"<exact_column_name>\",
+        \"params_date\": \"<exact_date_column>\",
+        \"params_group\": \"<column_name_or_null>\",
+        \"params_horizon\": <integer_based_on_rules>,
+        \"params_conf_level\": <0.80_to_0.99>,
+        \"fix_reason\": \"<brief_explanation>\"
+      }",
+
+      user_instructions,
       error_message,
       data_summary,
-      jsonlite::toJSON(prev_params, auto_unbox = TRUE))
-
+      jsonlite::toJSON(prev_params, auto_unbox = TRUE)
+    )
     # Get LLM response
     raw_response <- model(prompt)
 
@@ -1281,7 +1302,7 @@ node_func_human_review <- function(
     user_instructions_key = "user_instructions",
     recommended_steps_key = "recommended_steps") {
   function(state) {
-    cat(" * HUMAN REVIEW\n")
+    message(" * HUMAN REVIEW")
     steps <- if (!is.null(state[[recommended_steps_key]])) state[[recommended_steps_key]] else ""
     prompt_filled <- sprintf(prompt_text, steps)
     user_input <- interrupt(prompt_filled)
@@ -1309,13 +1330,13 @@ node_func_human_review <- function(
 #' Prophet, XGBoost, Random Forest, SVM, and Prophet Boost, and
 #' combines them in an ensemble.
 #'
-#'
 #' @name build_forecasting_agent
 #' @param model A function that takes a prompt and returns an LLM-generated result.
 #' @param bypass_recommended_steps Logical; skip initial step recommendation.
 #' @param bypass_explain_code Logical; skip the final explanation step.
 #' @param mode Visualization mode for forecast plots. One of `"light"` or `"dark"`.
 #' @param line_width Line width used in plotly forecast visualization.
+#' @param verbose Logical; whether to print progress messages.
 #'
 #' @return A callable agent function that mutates the given `state` list.
 #'
@@ -1338,14 +1359,15 @@ build_forecasting_agent <- function(
     bypass_recommended_steps = FALSE,
     bypass_explain_code = FALSE,
     mode = "light",
-    line_width = 3) {
+    line_width = 3,
+    verbose = FALSE) {
 
   # no human_validation needed
   human_validation = FALSE
 
   # Define node functions list
   node_functions <- list(
-    recommend_forecasting_steps = node_recommend_forecasting_steps(model),
+    recommend_forecasting_steps = node_recommend_forecasting_steps(model, verbose),
     human_review = node_func_human_review(
       prompt_text = "Are the following forecasting instructions correct# (Answer 'yes' or provide modifications)\n%s",
       yes_goto = if (!bypass_explain_code) "explain_forecasting_code" else "__end__",
@@ -1359,7 +1381,7 @@ build_forecasting_agent <- function(
       line_width = line_width,
       bypass_recommended_steps = bypass_recommended_steps
     ),
-    execute_forecasting_code = node_execute_forecasting_code,
+    execute_forecasting_code = function(state) node_execute_forecasting_code(state, verbose),
     fix_forecasting_code = node_fix_forecasting_code(model),
     explain_forecasting_code = node_explain_forecasting_code(model)
   )

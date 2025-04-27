@@ -143,7 +143,7 @@ StateGraph <- function() {
 ###############################################################################
 
 interrupt <- function(value) {
-  cat("\n", value, "\n")
+  message("\n", value, "\n")
   readline("Enter your response: ")
 }
 
@@ -303,46 +303,151 @@ create_coding_agent_graph <- function(
 ###############################################################################
 
 node_recommend_wrangling_steps <- function(model) {
+  `%||%` <- function(a, b) if (!is.null(a)) a else b
+
   function(state) {
-    cat("---DATA WRANGLING AGENT----\n")
-    cat("    * RECOMMEND TRANSFORMATION STEPS\n")
-
-    user_instructions <- state$user_instructions %||% ""
-    recommended_steps_prev <- state$recommended_steps %||% ""
-
-    # Handle data inputs
-    if (is.data.frame(state$data_raw)) {
-      data_list <- list(main = state$data_raw)
-    } else if (is.list(state$data_raw)) {
-      data_list <- state$data_raw
-      names(data_list) <- names(data_list) %||% paste0("dataset_", seq_along(data_list))
+    if (isTRUE(state$verbose)) {
+      message("---DATA WRANGLING AGENT----\n")
+      message("    * RECOMMEND TRANSFORMATION STEPS\n")
     }
 
-    # Generate summaries
-    summaries <- map(data_list, ~get_dataframe_summary(.x, skip_stats = TRUE))
-    all_datasets_summary <- paste(unlist(summaries), collapse = "\n\n")
+    user_instructions      <- state$user_instructions %||% ""
+    recommended_steps_prev <- state$recommended_steps   %||% ""
 
-    prompt <- sprintf(
-      "As a Data Wrangling Expert, recommend steps to transform and reshape the data. Focus on:
-- Merging/joining datasets (specify keys)
-- Reshaping (pivoting/stacking)
-- Feature engineering
-- Type conversions
-- Aggregations
-- Column renaming/reorganization
+    #  Gather data.frames into a named list
+    raw <- state$data_raw
+    if (is.data.frame(raw)) {
+      data_list <- list(main = raw)
+    } else if (is.list(raw)) {
+      data_list <- raw
+      if (is.null(names(data_list)) || any(names(data_list) == "")) {
+        names(data_list) <- paste0("dataset_", seq_along(data_list))
+      }
+    } else {
+      stop("`state$data_raw` must be a data.frame or list of data.frames")
+    }
 
-User instructions: %s
-Previous steps: %s
-Data summaries: %s
+    #  Detect potential join-keys
+    all_names <- unlist(lapply(data_list, names))
+    name_counts <- sort(table(all_names), decreasing = TRUE)
+    join_candidates <- names(name_counts)[name_counts >= 2]
+    join_info <- if (length(join_candidates)) {
+      paste0(
+        "Potential join-keys:\n",
+        paste0(
+          "* `", join_candidates, "`: in ",
+          sapply(join_candidates, function(col) {
+            paste(names(Filter(function(df) col %in% names(df), data_list)), collapse = ", ")
+          }),
+          collapse = "\n"
+        ),
+        "\n\n"
+      )
+    } else {
+      "No obvious join-keys found (no column in common between datasets).\n\n"
+    }
 
-Return numbered steps with brief explanations.",
-      user_instructions, recommended_steps_prev, all_datasets_summary
+    #  Build per-dataset & per-column summaries
+    ds_summaries <- lapply(names(data_list), function(ds_name) {
+      df     <- as.data.frame(data_list[[ds_name]])
+      n_rows <- nrow(df)
+      n_cols <- ncol(df)
+
+      # Header
+      header <- sprintf("**%s**  %d rows X %d cols", ds_name, n_rows, n_cols)
+
+      # Column details
+      col_lines <- lapply(names(df), function(col) {
+        vec         <- df[[col]]
+        type        <- class(vec)[1]
+        n_miss      <- sum(is.na(vec))
+        pct_miss    <- round(100 * n_miss / n_rows, 1)
+        n_distinct  <- length(unique(vec))
+        pct_unique  <- round(100 * n_distinct / n_rows, 1)
+
+        base <- sprintf(
+          "- `%s` (%s): miss%4d (%.1f%%), distinct%4d (%.1f%%)",
+          col, type, n_miss, pct_miss, n_distinct, pct_unique
+        )
+
+        # Numeric: quartiles
+        if (is.numeric(vec)) {
+          qs <- quantile(vec, c(0, .25, .5, .75, 1), na.rm=TRUE)
+          return(paste0(
+            base,
+            sprintf(", min/25/50/75/max=%.2f/%.2f/%.2f/%.2f/%.2f", qs[1], qs[2], qs[3], qs[4], qs[5])
+          ))
+        }
+
+        # Date/time
+        if (inherits(vec, c("Date","POSIXt"))) {
+          rng <- range(vec, na.rm=TRUE)
+          return(paste0(base, sprintf(", range=%s to %s", as.character(rng[1]), as.character(rng[2]))))
+        }
+
+        # Factor/char: top-3 levels
+        if (is.factor(vec) || is.character(vec)) {
+          tl <- sort(table(vec, useNA="no"), decreasing=TRUE)
+          top3 <- head(tl,3)
+          top_str <- paste(sprintf("%s(%d)", names(top3), as.integer(top3)), collapse=", ")
+          return(paste0(base, ", top=", top_str))
+        }
+
+        # Logical
+        if (is.logical(vec)) {
+          t_ct <- sum(vec, na.rm=TRUE)
+          f_ct <- sum(!vec, na.rm=TRUE)
+          return(paste0(base, sprintf(", TRUE=%d, FALSE=%d", t_ct, f_ct)))
+        }
+
+        # Constant?
+        if (n_distinct == 1) {
+          return(paste0(base, ", CONSTANT"))
+        }
+
+        # Fallback
+        return(base)
+      })
+
+      paste(c(header, col_lines), collapse = "\n")
+    })
+
+    all_datasets_summary <- paste0(
+      join_info,
+      paste(ds_summaries, collapse = "\n\n"),
+      "\n"
     )
 
+    #  Build enriched prompt
+    prompt <- sprintf(
+      "You are a Data Wrangling Expert. Given the data described below, recommend a series of *numbered* transformation steps.
+Focus on:
+  1. Use the **join-key candidates** to merge/join datasets
+  2. Reshaping ideas (pivot_longer, pivot_wider, stacking)
+  3. Feature engineering (aggregations, new flags)
+  4. Type conversions & date handling
+  5. Column renaming & reorganization
+
+User instructions:
+%s
+
+Previously recommended steps (if any):
+%s
+
+Data structure & stats:
+%s
+
+**Return** a numbered list of concise, actionable wrangling steps (no code).",
+      user_instructions,
+      recommended_steps_prev,
+      all_datasets_summary
+    )
+
+    #  Invoke LLM & return
     steps <- model(prompt)
 
     list(
-      recommended_steps = paste("\nRecommended Wrangling Steps:\n", trimws(steps)),
+      recommended_steps    = paste0("\nRecommended Wrangling Steps:\n", trimws(steps)),
       all_datasets_summary = all_datasets_summary
     )
   }
@@ -350,105 +455,132 @@ Return numbered steps with brief explanations.",
 
 node_create_data_wrangler_code <- function(model,
                                            bypass_recommended_steps = FALSE) {
+  `%||%` <- function(a, b) if (!is.null(a)) a else b
+
   function(state) {
-    # -----------------------------------------------------------------
-    # Initial Agent Notification and State Retrieval
-    # -----------------------------------------------------------------
-    if (bypass_recommended_steps) {
-      cat("---DATA WRANGLING AGENT----\n")
+    if (bypass_recommended_steps && isTRUE(state$verbose)) {
+      message("---DATA WRANGLING AGENT----\n")
     }
-    cat("    * CREATE DATA WRANGLER CODE\n")
+    if (isTRUE(state$verbose)) {
+      message("    * CREATE DATA WRANGLER CODE\n")
+    }
 
-    # Retrieve recommended steps and dataset summary from the state.
-    recommended_steps <- if (!is.null(state$recommended_steps)) state$recommended_steps else ""
-    all_datasets_summary <- if (!is.null(state$all_datasets_summary)) state$all_datasets_summary else "No dataset summary available."
+    user_instructions    <- state$user_instructions %||% ""
+    recommended_steps    <- state$recommended_steps   %||% ""
+    all_datasets_summary <- state$all_datasets_summary %||% "No dataset summary available."
 
-    # -----------------------------------------------------------------
-    # Construct the Prompt with the Combined Instructions
-    # -----------------------------------------------------------------
-    prompt <- sprintf(
-      "You are a Data Wrangling Coding Agent. Your job is to create a data_wrangler() function that can be run on the provided data.
+    prompt <- paste0(
+      "You are a Data Wrangling Coding Agent specialized in transforming and reshaping raw data into an analysis-ready single tibble in R using tidyverse only.\n\n",
 
-      Follow these recommended steps:
-      %s
+      "Please follow these guidelines and answer based on information from Step 1 - Step 3:\n\n",
 
-      If multiple datasets are provided, you may need to merge or join them. Make sure to handle that scenario based on the recommended steps and user instructions.
+      "1. **User Instructions for Data Wrangling:**\n",
+      user_instructions, "\n\n",
 
-      Below are summaries of all datasets provided. If more than one dataset is provided, you may need to merge or join them:
-      %s
+      "2. **Recommended Steps for Data Wrangling:**\n",
+      recommended_steps, "\n\n",
 
-      Return R code in ```r``` format with a single function definition, data_wrangler(), that includes all package checks and loading inside the function and returns a single data frame.
+      "3. **Dataset Overview:**\n",
+      all_datasets_summary, "\n\n",
 
-      The function should:
-      - Take a list of data frames as input (convert to list if not already)
-      - Include proper package requirement checks
-      - Handle all data wrangling steps
-      - Return a single cleaned/wrangled data frame
+      "4. **Namespace Requirement:**\n",
+      "   - Always prefix functions with their namespace, e.g. `dplyr::filter()`, `tidyr::pivot_longer()`, `purrr::map()`, etc.\n\n",
 
-      Example structure:
-      ```r
-      data_wrangler <- function(data_list) {
-        # Check and load required packages
-        if (!requireNamespace('dplyr', quietly = TRUE)) {
-          stop(\"Package 'dplyr' is required but not installed.\")
-        }
-        library(dplyr)
+      "5. **Function Requirements (all-in-one wrangler):**\n",
+      "   - **Input validation:** if not a data.frame or list, stop with an error.\n",
+      "   - **Normalize to list:** wrap a single data.frame into a list.\n",
+      "   - **Ensure tibble** for each element: use `tibble::as_tibble()`.\n",
+      "   - **Merge/join datasets** when common keys exist (e.g., `dplyr::left_join()`).\n",
+      "   - **Merge columns:** combine related fields using `tidyr::unite()`.\n",
+      "   - **Split columns:** separate composite fields with `tidyr::separate()`.\n",
+      "   - **Handle duplicate columns:** remove or rename duplicates appropriately.\n\n",
 
-        if (!requireNamespace('tidyr', quietly = TRUE)) {
-          stop(\"Package 'tidyr' is required but not installed.\")
-        }
-        library(tidyr)
+      "6. **Important requirements:**\n",
+      "   1. Include all necessary package checks and imports inside the function.\n",
+      "   2. Handle both single dataframe and list of dataframes as input.\n",
+      "   3. Comment all non-trivial steps clearly.\n",
+      "   4. Follow the recommended steps provided.\n",
+      "   5. Ensure the output is properly formatted with R code blocks.\n\n",
 
-        if (!requireNamespace('magrittr', quietly = TRUE)) {
-          stop(\"Package 'magrittr' is required for the pipe operator but is not installed.\")
-        }
-        library(magrittr)
 
-        # If input isn't a list, convert it to one
-        if (!is.list(data_list)) {
-          data_list <- list(data_list)
-        }
+      "7. **Additional Flexibility & Quality:**\n",
+      "   - Feel free to include any extra transformation steps, optimizations, robust error handling, and ensure the generated code is syntactically correct and error-free for production readiness.\n\n",
 
-        # Implement the wrangling steps here
+      "8. **Format:** Wrap the entire function in triple backticks tagged with `r`.\n\n",
 
-        # Return a single data frame
-        return(data_wrangled)
-      }
-      ```
-
-      Important requirements:
-      1. Include all necessary package checks and imports inside the function
-      2. Handle both single dataframe and list of dataframes as input
-      3. Comment all non-trivial steps clearly
-      4. Follow the recommended steps provided
-      5. Ensure the output is properly formatted with r code blocks
-
-      Your output should consist solely of the R function code wrapped in triple backticks as shown in the example.
-      Please generate the function accordingly.",
-      recommended_steps, all_datasets_summary)
-
+      "9. **Expected Output Example:**\n",
+      "```r\n",
+      "data_wrangler <- function(data_list) {\n",
+      "  # 1. Validate input\n",
+      "  if (!(is.data.frame(data_list) || is.list(data_list))) stop(\"`data_list` must be a data.frame or list of data.frames.\")\n\n",
+      "  # 2. Load packages with namespace checks\n",
+      "  for (pkg in c(\"dplyr\",\"tidyr\",\"purrr\",\"magrittr\",\"stringr\",\"lubridate\",\"forcats\",\"janitor\",\"assertr\",\"data.table\",\"dtplyr\",\"recipes\",\"vtreat\")) {\n",
+      "    if (!requireNamespace(pkg, quietly=TRUE)) stop(sprintf(\"Package '%s' is required.\", pkg))\n",
+      "  }\n",
+      "  suppressPackageStartupMessages({\n",
+      "    library(dplyr); library(tidyr); library(purrr); library(magrittr)\n",
+      "    library(stringr); library(lubridate); library(forcats)\n",
+      "    library(janitor); library(assertr); library(data.table)\n",
+      "    library(dtplyr); library(recipes); library(vtreat)\n",
+      "  })\n\n",
+      "  # 3. Normalize input to list of tibbles\n",
+      "  if (is.data.frame(data_list)) data_list <- list(data_list)\n",
+      "  data_list <- purrr::map(data_list, tibble::as_tibble)\n\n",
+      "  # 4. Merge/join datasets by key\n",
+      "  if (length(data_list) > 1) {\n",
+      "    data_wrangled <- purrr::reduce(data_list, dplyr::left_join, by = \"id\")\n",
+      "  } else {\n",
+      "    data_wrangled <- data_list[[1]]\n",
+      "  }\n\n",
+      "  # 5. Merge columns: unite first_name + last_name -> full_name\n",
+      "  data_wrangled <- tidyr::unite(data_wrangled, \"full_name\", first_name, last_name, sep = \" \")\n\n",
+      "  # 6. Split columns: separate date_time -> date + time\n",
+      "  data_wrangled <- tidyr::separate(data_wrangled, \"date_time\", into = c(\"date\",\"time\"), sep = \" \")\n\n",
+      "  # 7. Reshape: pivot longer on year_ columns\n",
+      "  data_wrangled <- data_wrangled %>% tidyr::pivot_longer(cols = starts_with(\"year_\"), names_to = \"year\", values_to = \"value\")\n\n",
+      "  # 8. Feature engineering: compute total & monthly_avg\n",
+      "  data_wrangled <- data_wrangled %>% dplyr::mutate(total = quantity * price, monthly_avg = total / 12)\n\n",
+      "  # 9. String cleaning: trim & squish description\n",
+      "  data_wrangled <- data_wrangled %>% dplyr::mutate(description = stringr::str_squish(stringr::str_trim(description)))\n\n",
+      "  # 10. Date parsing: parse date column\n",
+      "  data_wrangled <- data_wrangled %>% dplyr::mutate(date = lubridate::ymd(date))\n\n",
+      "  # 11. Factor handling: lump infrequent 'category' levels\n",
+      "  data_wrangled <- data_wrangled %>% dplyr::mutate(category = forcats::fct_lump(category, n = 5))\n\n",
+      "  # 12. Clean names & validate with janitor & assertr\n",
+      "  data_wrangled <- janitor::clean_names(data_wrangled)\n",
+      "  assertr::assert(data_wrangled, is.numeric, columns = \"price\")\n\n",
+      "  # 13. High-performance summary: data.table avg price by region\n",
+      "  DT <- data.table::as.data.table(data_wrangled)\n",
+      "  dt_summary <- DT[, .(avg_price = mean(price, na.rm = TRUE)), by = region]\n\n",
+      "  # 14. Modeling prep: create & juice recipe\n",
+      "  rec <- recipes::recipe(total ~ ., data = data_wrangled) %>%\n",
+      "    recipes::step_log(total, base = 10) %>%\n",
+      "    recipes::step_dummy(all_nominal())\n",
+      "  data_wrangled <- recipes::prep(rec, training = data_wrangled) %>% recipes::juice()\n\n",
+      "  # 15. Return final tibble\n",
+      "  return(data_wrangled)\n",
+      "}\n\n",
+      "Your output should consist solely of the R function code wrapped in triple backticks as shown in the example.\n",
+      "Please generate the function accordingly.",
+      "```"
+    )
     # -----------------------------------------------------------------
     # Generate the Code Using the Provided Model
     # -----------------------------------------------------------------
+    #  LLM CALL
     code_raw <- model(prompt)
 
-    # -----------------------------------------------------------------
-    # Extract the R Code Enclosed in Triple Backticks Tagged with 'r'
-    # -----------------------------------------------------------------
-    regex_pattern <- "```r(.*#)```"
-    match_result <- regexpr(regex_pattern, code_raw, perl = TRUE)
-    if (match_result[1] != -1) {
-      # Extract and clean the code captured between the backticks.
-      captured <- regmatches(code_raw, match_result)
-      code_extracted <- gsub("```r|```", "", captured)
-      code_extracted <- trimws(code_extracted)
+    #  Extract fenced R code
+    pat <- "(?s)```\\s*r?\\s*\\n(.*?)\\n```"
+    hit <- regexec(pat, code_raw, perl = TRUE)
+    cap <- regmatches(code_raw, hit)
+    code_extracted <- if (length(cap) && length(cap[[1]]) >= 2) {
+      trimws(cap[[1]][2])
     } else {
-      # Fallback to raw code if the expected pattern isn't found.
-      code_extracted <- trimws(code_raw)
+      trimws(code_raw)
     }
-
-    # Remove any stray triple backticks.
-    code_extracted <- gsub("```+", "", code_extracted)
+    code_extracted <- gsub("^```.*$", "", code_extracted)
+    code_extracted <- gsub("```$",     "", code_extracted)
 
     # -----------------------------------------------------------------
     # Return the Generated Code as a List
@@ -462,148 +594,97 @@ node_create_data_wrangler_code <- function(model,
 }
 
 node_execute_data_wrangler_code <- function(state) {
-  cat("    * EXECUTING DATA WRANGLER CODE\n")
+  if (isTRUE(state$verbose)) message("    * EXECUTING DATA WRANGLER CODE\n")
 
-  # 1. Package Management
-# Ensure all suggested packages are available
-required_packages <- c(
-  "utils", "stats", "base", "magrittr", "dplyr", "purrr"
-)
-
-invisible(lapply(required_packages, get_suggested))
-
-  # Check and install missing packages
-  missing_pkgs <- setdiff(required_packages, rownames(installed.packages()))
-  if (length(missing_pkgs) > 0) {
-    message("Installing required packages: ", paste(missing_pkgs, collapse = ", "))
-    install.packages(missing_pkgs, quiet = TRUE, repos = "https://cloud.r-project.org")
-  }
-
-  # Load all packages
-  suppressPackageStartupMessages({
-    invisible(lapply(required_packages, require, character.only = TRUE))
-  })
-
-  # 2. Code Extraction
-  extract_r_code_block <- function(text) {
+  # Improved code extraction function
+  extract_r_code <- function(text) {
     if (is.null(text)) return(NULL)
 
-    # Pattern 1: Triple backtick code blocks
-    pattern_r <- "(#s)```(#:r)#\\s*(.*#)\\s*```"
-    matches_r <- regmatches(text, regexec(pattern_r, text, perl = TRUE))
-    if (length(matches_r) > 0 && length(matches_r[[1]]) >= 2 && nzchar(matches_r[[1]][2])) {
-      return(trimws(matches_r[[1]][2]))
+    # Handle both ```r and ``` formats
+    pattern <- "(?s)```(?:r\\n)?(.*?)```"
+    matches <- regmatches(text, regexec(pattern, text, perl = TRUE))
+
+    if (length(matches) > 0 && length(matches[[1]]) > 1) {
+      code <- trimws(matches[[1]][2])
+      if (nzchar(code)) return(code)
     }
 
-    # Pattern 2: Direct function definition
-    pattern_func <- "(#s)(data_wrangler\\s*<-\\s*function\\s*\\([^\\)]*\\)\\s*\\{.*\\})"
-    matches_func <- regmatches(text, regexec(pattern_func, text, perl = TRUE))
-    if (length(matches_func) > 0 && length(matches_func[[1]]) >= 2 && nzchar(matches_func[[1]][2])) {
-      return(trimws(matches_func[[1]][2]))
+    # Fallback: look for function definition
+    if (grepl("data_wrangler\\s*<-\\s*function", text)) {
+      return(trimws(text))
     }
 
-    warning("Could not extract valid R code from text. Using raw text as code.")
-    return(trimws(text))
+    warning("No valid R code block found")
+    return(NULL)
   }
 
-  # 3. Input Validation
+  # Input validation
   if (is.null(state$data_wrangler_function)) {
     stop("State is missing data_wrangler_function")
   }
 
-  if (is.null(state$data_list) && is.null(state$data_raw)) {
-    stop("State is missing input data (both data_list and data_raw are NULL)")
-  }
-
-  code_snippet <- extract_r_code_block(state$data_wrangler_function)
-  if (is.null(code_snippet) || nchar(code_snippet) == 0) {
+  code_snippet <- extract_r_code(state$data_wrangler_function)
+  if (is.null(code_snippet)) {
     stop("No R code could be extracted from the data wrangler function")
   }
 
-  if (!grepl("data_wrangler\\s*<-\\s*function", code_snippet)) {
-    stop("No valid 'data_wrangler' function detected in the extracted code.")
+  # Package management
+  required_packages <- c("dplyr", "tidyr", "purrr", "magrittr")
+
+  # Check for missing packages using requireNamespace
+  missing_pkgs <- required_packages[!vapply(required_packages, requireNamespace, logical(1), quietly = TRUE)]
+
+  if (length(missing_pkgs) > 0) {
+    if (state$verbose) message("Missing packages: ", paste(missing_pkgs, collapse = ", "))
+    return(list(data_wrangler_error = paste("Missing required packages:", paste(missing_pkgs, collapse = ", "))))
   }
 
-  # 4. Execution Environment
-  local_env <- new.env(parent = baseenv())
-
-  # Load all required functions
+  # Load packages silently
   suppressPackageStartupMessages({
-    # Core tidyverse
-    local_env$`%>%` <- magrittr::`%>%`
-
-    # Load functions from all required packages
-    for (pkg in required_packages) {
-      pkg_exports <- getNamespaceExports(pkg)
-      for (f in pkg_exports) {
-        local_env[[f]] <- get(f, envir = getNamespace(pkg))
-      }
-    }
-
-    # Essential base R functions
-    base_funs <- c("c", "list", "data.frame", "as.data.frame", "names",
-                   "colnames", "rownames", "grep", "grepl", "sub", "gsub")
-    for (f in base_funs) {
-      local_env[[f]] <- get(f, envir = baseenv())
-    }
+    invisible(lapply(required_packages, require, character.only = TRUE))
   })
 
-  # 5. Execution with Improved Input Handling
+
+  # Execution environment
+  local_env <- new.env(parent = .GlobalEnv)
+  local_env$`%>%` <- magrittr::`%>%`
+
+  # Execute with error handling
   agent_error <- NULL
   result <- NULL
 
   tryCatch({
     # Parse and evaluate the code
-    parsed_code <- parse(text = code_snippet)
-    eval(parsed_code, envir = local_env)
+    eval(parse(text = code_snippet), envir = local_env)
 
-    if (!exists("data_wrangler", envir = local_env) || !is.function(local_env$data_wrangler)) {
+    if (!exists("data_wrangler", envir = local_env) ||
+        !is.function(local_env$data_wrangler)) {
       stop("'data_wrangler' function not found or invalid")
     }
 
-    # Prepare input data - robust handling
+    # Prepare input data
     input_data <- if (!is.null(state$data_list)) {
-      if (!is.list(state$data_list)) {
-        list(main = state$data_list)
-      } else {
-        if (is.null(names(state$data_list))) {
-          names(state$data_list) <- paste0("dataset_", seq_along(state$data_list))
-        }
-        state$data_list
-      }
+      if (!is.list(state$data_list)) list(main = state$data_list) else state$data_list
     } else {
-      if (is.data.frame(state$data_raw)) {
-        list(main = state$data_raw)
-      } else {
-        as.list(state$data_raw)
-      }
+      if (is.data.frame(state$data_raw)) list(main = state$data_raw) else as.list(state$data_raw)
     }
 
-    # Execute with proper error handling
-    res <- tryCatch(
-      local_env$data_wrangler(input_data),
-      error = function(e) stop("Execution failed: ", e$message)
-    )
+    # Execute the function
+    result <- local_env$data_wrangler(input_data)
 
-    # Standardize output
-    result <- if (is.data.frame(res)) {
-      res
-    } else if (is.list(res)) {
-      if (all(sapply(res, is.data.frame))) {
-        do.call(bind_rows, res)
-      } else {
-        as.data.frame(res)
-      }
-    } else {
-      data.frame(result = res)
+    # Standardize output to data.frame
+    if (!is.data.frame(result)) {
+      result <- tryCatch(
+        as.data.frame(result),
+        error = function(e) stop("Output could not be converted to data.frame")
+      )
     }
 
   }, error = function(e) {
     agent_error <<- paste("Data wrangling failed:", e$message)
-    cat("ERROR:", agent_error, "\n")
+    if (isTRUE(state$verbose)) message("ERROR:", agent_error, "\n")
   })
 
-  # 6. Return Results
   list(
     data_wrangled = result,
     data_wrangler_error = agent_error,
@@ -636,8 +717,8 @@ node_explain_data_wrangler_code <- function(model) {
 
 node_fix_data_wrangler_code <- function(model) {
   function(state) {
-    cat("    * FIX DATA WRANGLER CODE\n")
-    cat("      retry_count:", state$retry_count, "\n")
+    if (isTRUE(state$verbose))     message("    * FIX DATA WRANGLER CODE\n")
+    if (isTRUE(state$verbose))     message("      retry_count:", state$retry_count, "\n")
 
     code_snippet <- state$data_wrangler_function
     error_message <- state$data_wrangler_error
@@ -694,7 +775,7 @@ node_func_human_review <- function(
     user_instructions_key = "user_instructions",
     recommended_steps_key = "recommended_steps") {
   function(state) {
-    cat(" * HUMAN REVIEW\n")
+    if (isTRUE(state$verbose))     message(" * HUMAN REVIEW\n")
     steps <- if (!is.null(state[[recommended_steps_key]])) state[[recommended_steps_key]] else ""
     prompt_filled <- sprintf(prompt_text, steps)
     user_input <- interrupt(prompt_filled)
@@ -727,6 +808,7 @@ node_func_human_review <- function(
 #' @param human_validation Logical; whether to enable manual review step before code execution.
 #' @param bypass_recommended_steps Logical; skip initial recommendation of wrangling steps.
 #' @param bypass_explain_code Logical; skip final explanation step after wrangling.
+#' @param verbose Logical; whether to print progress messages (default: TRUE)
 #'
 #' @return A callable agent function that mutates a provided `state` list by populating:
 #'   - `data_wrangled`: the final cleaned data frame,
@@ -753,7 +835,8 @@ build_data_wrangling_agent <- function(
     model,
     human_validation = FALSE,
     bypass_recommended_steps = FALSE,
-    bypass_explain_code = FALSE) {
+    bypass_explain_code = FALSE,
+    verbose = TRUE) {
 
   # Define node functions list
   node_functions <- list(
@@ -794,6 +877,7 @@ build_data_wrangling_agent <- function(
 
   # Return a function that can be invoked with state
   function(state) {
+    state$verbose <- if (!is.null(state$verbose)) state$verbose else verbose
     if (is.null(state$retry_count)) state$retry_count <- 0
     if (is.null(state$max_retries)) state$max_retries <- 3
     app(state)

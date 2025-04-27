@@ -143,14 +143,13 @@ StateGraph <- function() {
 ###############################################################################
 
 interrupt <- function(value) {
-  cat("\n", value, "\n")
+  message("\n", value, "\n")
   readline("Enter your response: ")
 }
 
 make_command <- function(goto = NULL, update = list()) {
   list(goto = goto, update = update)
 }
-
 
 ###############################################################################
 ## 3) NODE FUNCTIONS
@@ -305,23 +304,137 @@ create_coding_agent_graph <- function(
 
 node_recommend_cleaning_steps <- function(model) {
   function(state) {
-    cat("---DATA CLEANING AGENT----\n")
-    cat("    * RECOMMEND CLEANING STEPS\n")
+    if (state$verbose) message("---DATA CLEANING AGENT----\n")
+    if (state$verbose) message("    * RECOMMEND CLEANING STEPS\n")
 
-    # Retrieve user instructions and any previously recommended steps; use empty string if not provided.
-    user_instructions <- if (!is.null(state$user_instructions)) state$user_instructions else ""
-    recommended_steps_prev <- if (!is.null(state$recommended_steps)) state$recommended_steps else ""
+    # Retrieve user instructions and any previously recommended steps
+    user_instructions      <- if (!is.null(state$user_instructions)) state$user_instructions else ""
+    recommended_steps_prev <- if (!is.null(state$recommended_steps))    state$recommended_steps    else ""
 
-    # Convert the raw data into a data frame.
-    df <- as.data.frame(state$data_raw)
+    # Handle data inputs
+    if (is.data.frame(state$data_raw)) {
+      df <- state$data_raw
+    } else if (is.list(state$data_raw)) {
+      df <- as.data.frame(state$data_raw)
+    } else {
+      stop("Invalid data format - must be dataframe or list")
+    }
 
-    # Generate a summary of the dataset(s).
-    # Here we assume get_dataframe_summary() accepts a list of data.frames and returns a character vector.
-    all_datasets_summary <- get_dataframe_summary(list(df))
-    # Collapse the summaries into a single string separated by double newlines for readability.
-    all_datasets_summary_str <- paste(all_datasets_summary, collapse = "\n\n")
+    # Convert the raw data into a data frame
+    n_rows <- nrow(df)
+    n_cols <- ncol(df)
 
-    # Create a detailed prompt for the language model.
+    # Overall dataset counts
+    dataset_info <- sprintf(
+      "Dataset dimensions:\n* Rows: %d\n* Columns: %d\n\n",
+      n_rows, n_cols
+    )
+
+    #  Build a super-detailed column-by-column summary
+    col_summaries <- lapply(names(df), function(col) {
+      vec           <- df[[col]]
+      type          <- class(vec)[1]
+      n_missing     <- sum(is.na(vec))
+      pct_missing   <- round(100 * n_missing / n_rows, 2)
+      distinct_vals <- unique(vec)
+      n_distinct    <- length(distinct_vals)
+      pct_unique    <- round(100 * n_distinct / n_rows, 2)
+
+      base_info <- paste0(
+        "* **", col, "** (", type, ")\n",
+        "  - Missing: ", n_missing, " (", pct_missing, "%)\n",
+        "  - Distinct: ", n_distinct, " (", pct_unique, "%)\n"
+      )
+
+      #  Numeric columns
+      if (is.numeric(vec)) {
+        qs      <- quantile(vec, probs = c(0, .25, .5, .75, 1), na.rm = TRUE)
+        mn      <- mean(vec, na.rm = TRUE)
+        sdv     <- sd(vec, na.rm = TRUE)
+        iqr     <- IQR(vec, na.rm = TRUE)
+        med_val <- qs[3]
+
+        # zero/negative
+        n_zero   <- sum(vec == 0, na.rm = TRUE)
+        pct_zero <- round(100 * n_zero / n_rows, 2)
+        n_neg    <- sum(vec < 0, na.rm = TRUE)
+        pct_neg  <- round(100 * n_neg / n_rows, 2)
+
+        # extreme outliers (3 X IQR around median)
+        out_thresh  <- 3 * iqr
+        n_extreme   <- sum((vec < (med_val - out_thresh) | vec > (med_val + out_thresh)), na.rm = TRUE)
+        pct_extreme <- round(100 * n_extreme / n_rows, 2)
+
+        # skewness & excess kurtosis
+        skewness <- if (sdv > 0) mean((vec - mn)^3, na.rm = TRUE) / sdv^3 else NA
+        kurtosis <- if (sdv > 0) mean((vec - mn)^4, na.rm = TRUE) / sdv^4 - 3 else NA
+
+        num_info <- paste0(
+          "  - Min/1st Qu./Median/Mean/3rd Qu./Max:\n",
+          sprintf("    %.3f / %.3f / %.3f / %.3f / %.3f / %.3f\n",
+                  qs[1], qs[2], med_val, mn, qs[4], qs[5]),
+          "  - SD: ", round(sdv, 3), "  IQR: ", round(iqr, 3), "\n",
+          "  - Zeros: ", n_zero, " (", pct_zero, "%)  Negatives: ", n_neg, " (", pct_neg, "%)\n",
+          "  - Extreme (3 X IQR): ", n_extreme, " (", pct_extreme, "%)\n",
+          "  - Skewness: ", round(skewness, 3), "  Excess Kurtosis: ", round(kurtosis, 3), "\n"
+        )
+
+        return(paste0(base_info, num_info))
+      }
+
+      #  Categorical (factor/character)
+      if (is.factor(vec) || is.character(vec)) {
+        tab_no_na <- table(vec, useNA = "no")
+        freqs     <- prop.table(tab_no_na)
+        entropy   <- -sum(freqs * log2(freqs), na.rm = TRUE)
+
+        tab_sorted <- sort(tab_no_na, decreasing = TRUE)
+        top_n      <- head(tab_sorted, 3)
+        top_info   <- paste(
+          sprintf("    %s: %d (%.1f%%)", names(top_n), as.integer(top_n), 100 * as.integer(top_n) / n_rows),
+          collapse = "\n"
+        )
+
+        cat_info <- paste0(
+          "  - Top levels:\n", top_info, "\n",
+          "  - Entropy: ", round(entropy, 3), " bits\n"
+        )
+        return(paste0(base_info, cat_info))
+      }
+
+      #  Logical
+      if (is.logical(vec)) {
+        t_ct      <- sum(vec, na.rm = TRUE)
+        f_ct      <- sum(!vec, na.rm = TRUE)
+        pct_true  <- round(100 * t_ct / n_rows, 2)
+        pct_false <- round(100 * f_ct / n_rows, 2)
+        log_info  <- paste0(
+          "  - TRUE: ", t_ct, " (", pct_true, "%)  FALSE: ", f_ct, " (", pct_false, "%)  NA: ", n_missing, "\n"
+        )
+        return(paste0(base_info, log_info))
+      }
+
+      #  Fallback for other types
+      sample_vals <- if (n_distinct > 10) {
+        paste(head(distinct_vals, 10), collapse = ", ")
+      } else {
+        paste(distinct_vals, collapse = ", ")
+      }
+      fallback_info <- paste0(
+        "  - Sample values: ", sample_vals,
+        if (n_distinct > 10) ", ..." else "", "\n"
+      )
+      paste0(base_info, fallback_info)
+    })
+
+    all_datasets_summary_str <- paste0(
+      dataset_info,
+      "These are the columns and their detailed statistics:\n\n",
+      paste(col_summaries, collapse = "\n")
+    )
+    #
+
+    # Prompt remains unchanged
     prompt <- sprintf(
       "You are a Data Cleaning Expert. Given the following information about the data,
 recommend a series of numbered steps to take to clean and preprocess it.
@@ -364,16 +477,16 @@ Avoid these:
       user_instructions, recommended_steps_prev, all_datasets_summary_str
     )
 
-    # Call the language model with the prompt to get cleaning recommendations.
+    # Invoke the model
     steps <- model(prompt)
 
-    # Return a list with the recommended cleaning steps and the dataset summary.
     list(
-      recommended_steps = paste("\n\n# Recommended Data Cleaning Steps:\n", trimws(steps), sep = ""),
+      recommended_steps    = paste0("\n\n# Recommended Data Cleaning Steps:\n", trimws(steps)),
       all_datasets_summary = all_datasets_summary_str
     )
   }
 }
+
 
 node_create_data_cleaner_code <- function(model,
                                           bypass_recommended_steps = FALSE) {
@@ -381,65 +494,125 @@ node_create_data_cleaner_code <- function(model,
     # -----------------------------------------------------------------
     # Initial Agent Notification and State Retrieval
     # -----------------------------------------------------------------
-    if (bypass_recommended_steps) {
-      cat("---DATA CLEANING AGENT----\n")
+    if (bypass_recommended_steps && state$verbose) {
+      message("---DATA CLEANING AGENT----\n")
     }
-    cat("    * CREATE DATA CLEANER CODE\n")
+    if (state$verbose) message("    * CREATE DATA CLEANER CODE\n")
 
     # Retrieve recommended steps and dataset summary from the state.
+    user_instructions <- if (!is.null(state$user_instructions)) state$user_instructions else ""
     recommended_steps <- if (!is.null(state$recommended_steps)) state$recommended_steps else ""
     all_datasets_summary <- if (!is.null(state$all_datasets_summary)) state$all_datasets_summary else "No dataset summary available."
 
     # -----------------------------------------------------------------
     # Construct the Prompt with the New Instructions
     # -----------------------------------------------------------------
-    prompt <- sprintf(
-      "You are a Data Cleaning Agent specialized in preparing and cleaning data for analysis using R. Your task is to generate a complete and valid R function named `data_cleaner` that takes a dataframe (named `data_raw`) as its sole input and returns a cleaned version of that dataframe.
+    # -----------------------------------------------------------------
+    # Prompt: tidyverse-only Data Cleaner (all-in-one, production-ready)
+    # -----------------------------------------------------------------
+    prompt <- paste0(
+      "You are a Data Cleaning Agent specialized in preparing and cleaning data for analysis using tidyverse only in R. ",
+      "Your task is to generate a complete and valid R function named `data_cleaner` that takes a dataframe (named `data_raw`) ",
+      "as its sole input and returns a cleaned version of that dataframe.\n\n",
 
-Please follow these guidelines:
+      "Please follow these guidelines and answer based on information from Step 1 - Step 3:\n\n",
 
-1. **Recommended Steps for Data Cleaning:**
-   %s
+      "1. **User Instructions for Data Cleaning:**\n",
+      user_instructions, "\n\n",
 
-2. **Dataset Overview:**
-   %s
+      "2. **Recommended Steps for Data Cleaning:**\n",
+      recommended_steps, "\n\n",
 
-3. **Function Requirements:**
-   - **Self-contained:** Include all necessary library imports (e.g., `library(dplyr)`, `library(tidyr)`, etc.) inside the function.
-   - **Robust Data Cleaning:** Your function should handle missing values, inconsistent data, and outliers appropriately. (Note: Follow user instructions that might modify or skip certain steps where applicable.)
-   - **Coding Best Practices:** Write clear, concise, and well-commented code using efficient and idiomatic R.
-   - **Output:** The function must be defined as `data_cleaner <- function(data_raw) { ... }` and must return a cleaned dataframe (e.g., assign the result to `data_cleaned` before returning).
-   - **Format:** Ensure the entire function is enclosed within triple backticks tagged with `r` for easy extraction.
+      "3. **Dataset Overview:**\n",
+      all_datasets_summary, "\n\n",
 
-4. **Expected Output Format Example:**
-   ```r
-   data_cleaner <- function(data_raw) {
-       if (!requireNamespace('dplyr', quietly = TRUE)) {
-         stop(\"Package 'dplyr' is required but not installed.\")
-       }
-       library(dplyr)
+      "4. **Package Requirements (tidyverse-only):**\n",
+      "   - Load **tidyverse** with suppression:\n",
+      "     ```r\n",
+      "     if (!requireNamespace(\"tidyverse\", quietly = TRUE)) stop(\"Package 'tidyverse' is required but not installed.\")\n",
+      "     suppressWarnings(suppressPackageStartupMessages(library(tidyverse)))\n",
+      "     ```\n",
+      "   - Allowed sub-packages:\n",
+      "     - Data import & export: readr, readxl, haven, DBI/dbplyr\n",
+      "     - Data wrangling & tidying: dplyr, tidyr\n",
+      "     - Visualization: ggplot2\n",
+      "     - Functional programming & iteration: purrr\n",
+      "     - Strings & factors: stringr, forcats\n",
+      "     - Tibbles & I/O helpers: tibble, glue\n\n",
 
-       if (!requireNamespace('tidyr', quietly = TRUE)) {
-         stop(\"Package 'tidyr' is required but not installed.\")
-       }
-       library(tidyr)
+      "5. **Namespace Requirement:**\n",
+      "   - Always prefix functions with their namespace, e.g. `dplyr::filter()`, `stringr::str_trim()`, `purrr::map()`, etc.\n\n",
 
-       if (!requireNamespace('magrittr', quietly = TRUE)) {
-         stop(\"Package 'magrittr' is required for the pipe operator but is not installed.\")
-       }
-       library(magrittr)
+      "6. **Function Requirements (all-in-one cleaning):**\n",
+      "   - **Input validation:** if not a data.frame/tibble, stop with an error.\n",
+      "   - **Ensure tibble:** use `tibble::as_tibble(data_raw)`.\n",
+      "   - **Drop high-NA columns:** `dplyr::select(dplyr::where(~ mean(is.na(.)) < 0.5))`.\n",
+      "   - **Drop zero-variance columns:** `dplyr::select(dplyr::where(~ dplyr::n_distinct(.) > 1))`.\n",
+      "   - **Remove rows all-NA:** `dplyr::filter(!dplyr::if_all(dplyr::everything(), ~ is.na(.)))`.\n",
+      "   - **Impute numeric NAs:** `dplyr::mutate(dplyr::across(dplyr::where(is.numeric), ~ dplyr::if_else(is.na(.), stats::median(., na.rm = TRUE), .)))`.\n",
+      "   - **Impute categorical/character NAs:**\n",
+      "       - For factors: `forcats::fct_explicit_na(<col>, na_level = \"Unknown\")`.\n",
+      "       - For characters: `dplyr::if_else(is.na(.), \"Unknown\", .)` inside `across(where(is.character), ...)`.\n",
+      "   - **Trim & squish text:** `stringr::str_squish(stringr::str_trim(.))` on all character columns.\n",
+      "   - **Standardize column names to snake_case:**\n",
+      "       `dplyr::rename_with(~ stringr::str_replace_all(stringr::str_to_lower(.), \"[^a-z0-9]+\", \"_\"))`.\n",
+      "   - **Parse date columns:** `dplyr::across(dplyr::contains(\"date\"), ~ readr::parse_date(., guess_formats(., c(\"Ymd\",\"mdY\",\"dmY\"))))`.\n",
+      "   - **Remove duplicates:** `dplyr::distinct()`.\n",
+      "   - **Filter outliers (1.5 * IQR rule):**\n",
+      "       `dplyr::filter(dplyr::if_all(dplyr::where(is.numeric), ~ dplyr::between(., stats::quantile(., .25, na.rm = TRUE) - 1.5 * IQR(., na.rm = TRUE), stats::quantile(., .75, na.rm = TRUE) + 1.5 * IQR(., na.rm = TRUE))))`.\n",
+      "   - **Winsorize extremes (+3 SD) or (-3 SD):**\n",
+      "       `dplyr::mutate(dplyr::across(dplyr::where(is.numeric), ~ { mu <- stats::mean(., na.rm = TRUE); sd <- stats::sd(., na.rm = TRUE); dplyr::if_else(. < mu - 3*sd, mu - 3*sd, dplyr::if_else(. > mu + 3*sd, mu + 3*sd, .)) }))`.\n",
+      "   - **Re-encode factor levels alphabetically:**\n",
+      "       `dplyr::mutate(dplyr::across(dplyr::where(is.factor), ~ forcats::fct_relevel(., sort(levels(.)))))`.\n\n",
 
-       # Data cleaning logic here:
-       # - Handle missing values
-       # - Impute data as appropriate
-       # - Remove duplicates, etc.
+      "7. **Format:** Wrap the entire function in triple backticks tagged with `r`.\n\n",
 
-       return(data_cleaned)
-   }
-Your output should consist solely of the R function code wrapped in triple backticks as shown in the example.
-Please generate the function accordingly.
-"
-      ,recommended_steps, all_datasets_summary)
+
+      "8. **Additional Flexibility & Quality:**\n",
+      "   - Feel free to include any extra transformation steps, optimizations, robust error handling, and ensure the generated code is syntactically correct and error-free for production readiness.\n\n",
+
+      "9. **Expected Output Example:**\n",
+      "```r\n",
+      "data_cleaner <- function(data_raw) {\n",
+      "  # 1. Validate input\n",
+      "  if (!is.data.frame(data_raw)) stop(\"`data_raw` must be a data.frame or tibble.\")\n\n",
+      "  # 2. Load tidyverse\n",
+      "  if (!requireNamespace(\"tidyverse\", quietly = TRUE)) stop(\"Package 'tidyverse' is required but not installed.\")\n",
+      "  suppressWarnings(suppressPackageStartupMessages(library(tidyverse)))\n\n",
+      "  # 3. Convert to tibble\n",
+      "  data_cleaned <- tibble::as_tibble(data_raw)\n\n",
+      "  # 4. Drop high-NA & zero-var columns\n",
+      "  data_cleaned <- data_cleaned %>%\n",
+      "    dplyr::select(dplyr::where(~ mean(is.na(.)) < 0.5)) %>%\n",
+      "    dplyr::select(dplyr::where(~ dplyr::n_distinct(.) > 1))\n\n",
+      "  # 5. Remove all-NA rows\n",
+      "  data_cleaned <- data_cleaned %>%\n",
+      "    dplyr::filter(!dplyr::if_all(dplyr::everything(), ~ is.na(.)))\n\n",
+      "  # 6. Impute NAs & text cleanup\n",
+      "  data_cleaned <- data_cleaned %>%\n",
+      "    dplyr::mutate(\n",
+      "      dplyr::across(dplyr::where(is.numeric), ~ dplyr::if_else(is.na(.), stats::median(., na.rm = TRUE), .)),\n",
+      "      dplyr::across(dplyr::where(is.character), ~ dplyr::if_else(is.na(.), \"Unknown\", stringr::str_squish(stringr::str_trim(.))))\n",
+      "    )\n\n",
+      "  # 7. Rename & parse\n",
+      "  data_cleaned <- data_cleaned %>%\n",
+      "    dplyr::rename_with(~ stringr::str_replace_all(stringr::str_to_lower(.), \"[^a-z0-9]+\", \"_\")) %>%\n",
+      "    dplyr::mutate(dplyr::across(dplyr::contains(\"date\"), ~ readr::parse_date(., guess_formats(., c(\"Ymd\",\"mdY\",\"dmY\")))))\n\n",
+      "  # 8. Dedup, outlier & winsorize\n",
+      "  data_cleaned <- data_cleaned %>%\n",
+      "    dplyr::distinct() %>%\n",
+      "    dplyr::filter(dplyr::if_all(dplyr::where(is.numeric), ~ dplyr::between(., stats::quantile(., .25, na.rm = TRUE) - 1.5*IQR(., na.rm = TRUE), stats::quantile(., .75, na.rm = TRUE) + 1.5*IQR(., na.rm = TRUE)))) %>%\n",
+      "    dplyr::mutate(dplyr::across(dplyr::where(is.numeric), ~ { mu <- stats::mean(., na.rm = TRUE); sd <- stats::sd(., na.rm = TRUE); dplyr::if_else(. < mu - 3*sd, mu - 3*sd, dplyr::if_else(. > mu + 3*sd, mu + 3*sd, .)) }))\n\n",
+      "  # 9. Re-order factor levels\n",
+      "  data_cleaned <- data_cleaned %>%\n",
+      "    dplyr::mutate(dplyr::across(dplyr::where(is.factor), ~ forcats::fct_relevel(., sort(levels(.)))))\n\n",
+      "  return(data_cleaned)\n",
+      "}\n",
+      "```", "\n\n",
+
+      "Your output should consist solely of the R function code wrapped in triple backticks as shown in the example.\n",
+      "Please generate the function accordingly."
+    )
 
     # -----------------------------------------------------------------
     # Generate the Code Using the Provided Model
@@ -449,7 +622,7 @@ Please generate the function accordingly.
     # -----------------------------------------------------------------
     # Extract the R Code Enclosed in Triple Backticks Tagged with 'r'
     # -----------------------------------------------------------------
-    regex_pattern <- "```r(.*#)```"
+    regex_pattern <- "```r(.*?)```"
     match_result <- regexpr(regex_pattern, code_raw, perl = TRUE)
     if (match_result[1] != -1) {
       # Extract and clean the code captured between the backticks.
@@ -476,6 +649,7 @@ Please generate the function accordingly.
 }
 
 
+
 node_func_human_review <- function(
     prompt_text,
     yes_goto,
@@ -483,7 +657,7 @@ node_func_human_review <- function(
     user_instructions_key = "user_instructions",
     recommended_steps_key = "recommended_steps") {
   function(state) {
-    cat("    * HUMAN REVIEW\n")
+    if (state$verbose) message("    * HUMAN REVIEW\n")
     steps <- if (!is.null(state[[recommended_steps_key]])) state[[recommended_steps_key]] else ""
     prompt_filled <- sprintf(prompt_text, steps)
     user_input <- interrupt(prompt_filled)
@@ -499,8 +673,10 @@ node_func_human_review <- function(
   }
 }
 
+
 node_execute_data_cleaner_code <- function(state) {
-  cat("    * EXECUTING DATA CLEANER CODE\n")
+  if (state$verbose) message("    * EXECUTING DATA CLEANER CODE\n")
+
 
   # 1. Package Management
   required_packages <- c("dplyr", "tidyr", "stringr", "lubridate", "magrittr")
@@ -515,14 +691,14 @@ node_execute_data_cleaner_code <- function(state) {
     }
 
     # Pattern 1: Triple backtick code blocks
-    pattern_r <- "(#s)```(#:r)#\\s*(.*#)\\s*```"
+    pattern_r <- "(?s)```(?:r)?\\s*(.*?)\\s*```"
     matches_r <- regmatches(text, regexec(pattern_r, text, perl = TRUE))
     if (length(matches_r) > 0 && length(matches_r[[1]]) >= 2 && nzchar(matches_r[[1]][2])) {
       return(trimws(matches_r[[1]][2]))
     }
 
     # Pattern 2: Direct function definition
-    pattern_func <- "(#s)(data_cleaner\\s*<-\\s*function\\s*\\([^\\)]*\\)\\s*\\{.*\\})"
+    pattern_func <- "(?s)(data_cleaner\\s*<-\\s*function\\s*\\([^\\)]*\\)\\s*\\{.*\\})"
     matches_func <- regmatches(text, regexec(pattern_func, text, perl = TRUE))
     if (length(matches_func) > 0 && length(matches_func[[1]]) >= 2 && nzchar(matches_func[[1]][2])) {
       return(trimws(matches_func[[1]][2]))
@@ -628,10 +804,11 @@ node_execute_data_cleaner_code <- function(state) {
       list(cleaned_data = res)
     }
 
+
   }, error = function(e) {
     agent_error <<- paste("Data cleaning failed:", e$message)
-    cat("ERROR:", agent_error, "\n")
-    cat("Failed code snippet:\n", code_snippet, "\n")
+    if (state$verbose) message("ERROR:", agent_error, "\n")
+    if (state$verbose) message("Failed code snippet:\n", code_snippet, "\n")
   })
 
   # 6. Return Results -------------------------------------------------------
@@ -645,8 +822,8 @@ node_execute_data_cleaner_code <- function(state) {
 
 node_fix_data_cleaner_code <- function(model) {
   function(state) {
-    cat("    * FIX DATA CLEANER CODE\n")
-    cat("      retry_count:", state$retry_count, "\n")
+    if (state$verbose) message("    * FIX DATA CLEANER CODE\n")
+    if (state$verbose) message("      retry_count:", state$retry_count, "\n")
 
     code_snippet <- state$data_cleaner_function
     error_message <- state$data_cleaner_error
@@ -685,7 +862,7 @@ node_explain_data_cleaner_code <- function(
     success_prefix = "# Data Cleaning Agent:\n\n",
     error_message = "The Data Cleaning Agent encountered an error during data cleaning. Data could not be explained.") {
   function(state) {
-    cat("    * EXPLAIN DATA CLEANER CODE\n")
+    if (state$verbose) message("    * EXPLAIN DATA CLEANER CODE\n")
     agent_error <- state$data_cleaner_error
     if (!is.null(agent_error)) {
       msg <- list(list(content = error_message, role = "ERROR"))
@@ -715,6 +892,7 @@ node_explain_data_cleaner_code <- function(
 #' @param human_validation Logical; whether to include a manual review step.
 #' @param bypass_recommended_steps Logical; whether to skip LLM-based cleaning step suggestions.
 #' @param bypass_explain_code Logical; whether to skip explanation of the generated code.
+#' @param verbose Logical; whether to print progress messages (default: TRUE)
 #'
 #' @return A compiled graph-based cleaning agent function that accepts and mutates a state list.
 #' @examples
@@ -730,25 +908,12 @@ node_explain_data_cleaner_code <- function(
 #' @export
 NULL
 
-# Required libraries
-library(DBI)
-
 build_data_cleaning_agent <- function(model,
-                                     data_raw,
-                                     human_validation = FALSE,
-                                     bypass_recommended_steps = FALSE,
-                                     bypass_explain_code = FALSE) {
-  # In R, the state is just a list that will contain keys such as:
-  # user_instructions, recommended_steps, data_raw, data_cleaned,
-  # all_datasets_summary, data_cleaner_function, data_cleaner_function_path,
-  # data_cleaner_error, max_retries, retry_count, etc.
-  # Ensure all suggested packages are available
-
-  required_packages <- c(
-    "utils", "stats", "base", "magrittr", "dplyr", "purrr"
-  )
-
-  invisible(lapply(required_packages, get_suggested))
+                                      data_raw,
+                                      human_validation = FALSE,
+                                      bypass_recommended_steps = FALSE,
+                                      bypass_explain_code = FALSE,
+                                      verbose = TRUE) {
 
   # Define node functions list
   node_functions <- list(
@@ -764,6 +929,7 @@ build_data_cleaning_agent <- function(model,
     explain_data_cleaner_code = node_explain_data_cleaner_code(model)
   )
 
+
   app <- create_coding_agent_graph(
     node_functions = node_functions,
     recommended_steps_node_name = "recommend_cleaning_steps",
@@ -776,10 +942,13 @@ build_data_cleaning_agent <- function(model,
     retry_count_key = "retry_count",
     human_validation = human_validation,
     human_review_node_name = "human_review",
-    checkpointer = NULL,  # Optionally, you could provide a memory saver function here
+    checkpointer = NULL,
     bypass_recommended_steps = bypass_recommended_steps,
     bypass_explain_code = bypass_explain_code
   )
 
-  app
+  function(state) {
+    state$verbose <- if (!is.null(state$verbose)) state$verbose else verbose
+    app(state)
+  }
 }

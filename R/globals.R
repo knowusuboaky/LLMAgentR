@@ -10,7 +10,9 @@ utils::globalVariables(
     ".index", ".conf_lo",
 
     # plot variables
-    "item_id", ".conf_hi", "id"
+    "item_id", ".conf_hi", "id",
 
+    # message
+    "verbose"
   )
 )

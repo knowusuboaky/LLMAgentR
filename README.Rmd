@@ -1,61 +1,64 @@
+---
+output: github_document
+---
+
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
+  
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  eval = FALSE,
+  comment = "#>",
+  fig.path = "man/figures/README-",
+  out.width = "100%"
+)
+```
 
 # LLMAgentR <a href="https://knowusuboaky.github.io/LLMAgentR"><img src="man/figures/llmaopenlogo.png" align="right" height="120" /></a>
 
+
 <!-- badges: start -->
-[![License:
-MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![CRAN
-status](https://www.r-pkg.org/badges/version/LLMAgentR)](https://cran.r-project.org/package=LLMAgentR)
-[![Total
-Downloads](https://cranlogs.r-pkg.org/badges/grand-total/LLMAgentR?color=orange)](https://cranlogs.r-pkg.org/badges/grand-total/LLMAgentR)
-[![Last
-Commit](https://img.shields.io/github/last-commit/knowusuboaky/LLMAgentR.svg)](https://github.com/knowusuboaky/LLMAgentR/commits/main)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![CRAN status](https://www.r-pkg.org/badges/version/LLMAgentR)](https://cran.r-project.org/package=LLMAgentR)
+[![Total Downloads](https://cranlogs.r-pkg.org/badges/grand-total/LLMAgentR?color=orange)](https://cranlogs.r-pkg.org/badges/grand-total/LLMAgentR)
+[![Last Commit](https://img.shields.io/github/last-commit/knowusuboaky/LLMAgentR.svg)](https://github.com/knowusuboaky/LLMAgentR/commits/main)
 [![Issues](https://img.shields.io/github/issues/knowusuboaky/LLMAgentR.svg)](https://github.com/knowusuboaky/LLMAgentR/issues)
 <!-- badges: end -->
 
 ## Overview
 
-**LLMAgentR** is an R package for building **Language Model Agents**
-using a modular **state graph** execution framework. Inspired by
-LangGraph and LangChain architectures, it supports iterative workflows
-for research, data analysis, and automation.
+**LLMAgentR** is an R package for building **Language Model Agents** using a modular **state graph** execution framework. Inspired by LangGraph and LangChain architectures, it supports iterative workflows for research, data analysis, and automation.
 
-------------------------------------------------------------------------
+---
 
 ## Installation
 
-``` r
+```r
 install.packages("LLMAgentR")
 ```
 
-------------------------------------------------------------------------
+---
 
 ## Development version
 
-To get the latest features or bug fixes, you can install the development
-version of `LLMAgentR` from GitHub:
+To get the latest features or bug fixes, you can install the development version of `LLMAgentR` from GitHub:
 
-``` r
+```r
 # If needed
 install.packages("remotes")
 
 remotes::install_github("knowusuboaky/LLMAgentR")
 ```
 
-See the full [function
-reference](https://knowusuboaky.github.io/LLMAgentR/reference) or the
-[package website](https://knowusuboaky.github.io/LLMAgentR/) for more
-details.
+See the full [function reference](https://knowusuboaky.github.io/LLMAgentR/reference) or the [package website](https://knowusuboaky.github.io/LLMAgentR/) for more details.
 
-------------------------------------------------------------------------
+---
 
 ## Environment Setup
 
 ## API Setup
 
-``` r
+```{r api-setup, eval=FALSE}
 Sys.setenv(
   OPENAI_API_KEY = "your-key",
   GROQ_API_KEY = "your-key",
@@ -65,14 +68,13 @@ Sys.setenv(
 )
 ```
 
-------------------------------------------------------------------------
+---
 
 ## LLM Support (Minimal Wrapper)
 
-Load the package and either call an LLM directly or create a reusable
-wrapper:
+Load the package and either call an LLM directly or create a reusable wrapper:
 
-``` r
+```r
 # Load the chatLLM package
 library(chatLLM)
 
@@ -120,25 +122,23 @@ my_llm_wrapper <- function(prompt, verbose = FALSE) {
 }
 ```
 
-------------------------------------------------------------------------
+---
 
 ## 📦 Related Package: [`chatLLM`](https://cran.r-project.org/package=chatLLM)
 
-The [`chatLLM`](https://github.com/knowusuboaky/chatLLM) package (now
-available on CRAN 🎉) offers a modular interface for interacting with
-LLM providers including **OpenAI**, **Groq**, and **Anthropic**.
+The [`chatLLM`](https://github.com/knowusuboaky/chatLLM) package (now available on CRAN 🎉) offers a modular interface for interacting with LLM providers including **OpenAI**, **Groq**, and **Anthropic**.
 
-``` r
+```r
 install.packages("chatLLM")
 ```
 
-------------------------------------------------------------------------
+---
 
 ## Agent Examples
 
 ### 1. Code Generation Agent
 
-``` r
+```{r code-agent, eval=FALSE}
 library(LLMAgentR)
 
 coder_agent <- build_code_agent(
@@ -150,7 +150,7 @@ coder_agent <- build_code_agent(
 )
 ```
 
-``` r
+```r
 cat(coder_agent$llm_response)
 #> ```r
 #> library(dplyr)
@@ -185,7 +185,7 @@ cat(coder_agent$llm_response)
 
 ### 2. SQL Query Agent
 
-``` r
+```{r sql-agent, eval=FALSE}
 library(LLMAgentR)
 library(DBI)
 library(RSQLite)
@@ -218,7 +218,7 @@ final_state <- sql_agent(initial_state)
 str(final_state)
 ```
 
-``` r
+```r
 cat(final_state$sql_database_function)
 #> ```r
 #> sql_database_pipeline <- function(connection) {
@@ -261,10 +261,7 @@ df <- as.data.frame(final_state$data_sql)
 #> 8      Scandinavia             3   13902226
 #> 9             <NA>             2    9745371
 #> 10  Eastern Europe             1    4738465
-#>
-Disconnect it when done
-#>DBI::dbDisconnect(conn)
-#>
+
 View the explanation generated by the agent
 cat(final_state$messages[[1]]$content)
 #> # SQL Database Agent:
@@ -290,7 +287,7 @@ cat(final_state$messages[[1]]$content)
 
 ### 3. Research Agent
 
-``` r
+```{r research-agent, eval=FALSE}
 library(LLMAgentR)
 
 # Initialize researcher agent
@@ -308,7 +305,7 @@ researcher_agent <- build_researcher_agent(
 result <- researcher_agent("Who is Messi?")
 ```
 
-``` r
+```r
 cat(result$response)
 #> ```markdown
 #> **Summary**: Lionel Messi is an Argentine professional footballer widely regarded as one of the greatest players of all time. He plays as a forward for Inter Miami in Major League Soccer and captains the Argentina national team.
@@ -330,7 +327,7 @@ cat(result$response)
 
 ### 4. Interpreter Agent
 
-``` r
+```{r interpreter-agent, eval=FALSE}
 library(LLMAgentR)
 
 # Example table or code output
@@ -353,7 +350,7 @@ interpreter_agent <- build_interpreter_agent(
 )
 ```
 
-``` r
+```r
 cat(interpreter_agent$interpretation)
 #> **1. Interpretation**:
 #> 
@@ -374,7 +371,7 @@ cat(interpreter_agent$interpretation)
 
 ### 5. Document Summarizer
 
-``` r
+```{r summarizer-agent, eval=FALSE}
 library(LLMAgentR)
 library(officer)
 library(pdftools)
@@ -399,7 +396,7 @@ summarizer_agent <- build_doc_summarizer_agent(
 final_state <- summarizer_agent("https://github.com/knowusuboaky/LLMAgentR/raw/main/tests/testthat/test-data/scrum.docx")
 ```
 
-``` r
+```r
 cat(final_state$summary)
 #> # Key Findings
 #> 
@@ -449,9 +446,11 @@ cat(final_state$summary)
 #> - **Continuous Improvement**: Emphasizes the importance of iterating and refining the process through regular retrospectives and feedback loops.
 ```
 
+
+
 ### 6. Data Cleaning Agent
 
-``` r
+```{r cleaning-agent, eval=FALSE}
 library(LLMAgentR)
 
 # 1) Load the data
@@ -478,7 +477,7 @@ initial_state <- list(
 final_state <- data_cleaner_agent(initial_state)
 ```
 
-``` r
+```r
 # 5) Convert cleaned output to data.frame
 cleaned_df <- as.data.frame(final_state$data_cleaned)
 
@@ -581,7 +580,7 @@ cat(final_state$data_cleaner_function_name)
 
 ### 7. Forecasting Agent
 
-``` r
+```{r forecast-agent, eval=FALSE}
 library(LLMAgentR)
 library(dplyr)
 library(rlang)
@@ -613,9 +612,9 @@ initial_state <- list(
 final_state <- forecasting_agent(initial_state)
 ```
 
-------------------------------------------------------------------------
+---
 
-``` r
+```r
 # 6) View forecast parameters
 str(final_state$forecasting_params)
 #> List of 5
@@ -662,9 +661,41 @@ final_state$forecasting_result
 #>```
 ```
 
+#### Forecast Plot: Light Mode
+
+<!--html_preserve-->
+<iframe 
+src="inst/assets/forecast_light_plot.html" 
+style="
+  width:100%;
+  height:300px;
+  /* solid black 2-px border */
+  border:2px solid #000;
+  /* rounded corners */
+  border-radius:4px;
+"></iframe>
+<!--/html_preserve-->
+
+
+#### Forecast Plot: Dark Mode
+
+<!--html_preserve-->
+<iframe 
+src="inst/assets/forecast_dark_plot.html" 
+style="
+  width:100%;
+  height:300px;
+  /* solid black 2-px border */
+  border:2px solid #000;
+  /* rounded corners */
+  border-radius:4px;
+"></iframe>
+<!--/html_preserve-->
+
+
 ### 8. Data Wrangling Agent
 
-``` r
+```{r wrangle-agent, eval=FALSE}
 library(LLMAgentR)
 
 # 1) Simulate multiple data frames with a common ID
@@ -710,7 +741,7 @@ initial_state <- list(
 final_state <- data_wrangling_agent(initial_state)
 ```
 
-``` r
+```r
 # 6) View the wrangled data
 final_state$data_wrangled
 #> A tibble: 4 × 6
@@ -795,7 +826,7 @@ cat(final_state$data_wrangler_function_name)
 
 ### 9. Weather Agent
 
-``` r
+```{r weather-agent, eval=FALSE}
 library(LLMAgentR)
 
 # Get weather information
@@ -812,7 +843,7 @@ weather_agent <- build_weather_agent(
 )
 ```
 
-``` r
+```r
 # Print formatted weather response
 cat(weather_agent$llm_response)
 #> Tokyo, Japan is experiencing scattered clouds with a temperature of 21.1°C. 
@@ -865,7 +896,7 @@ str(weather_agent$weather_raw)
 
 ### 10. Feature Engineering Agent
 
-``` r
+```{r feature-agent, eval=FALSE}
 library(LLMAgentR)
 
 # 1) Load the data
@@ -893,7 +924,7 @@ initial_state <- list(
 final_state <- feature_engineering_agent(initial_state)
 ```
 
-``` r
+```r
 #>```r
 # 5) Convert to data.frame if needed
 engineered_df <- as.data.frame(final_state$data_engineered)
@@ -948,7 +979,7 @@ cat(final_state$feature_engineer_function_name)
 
 ### 11. Visualization Agent
 
-``` r
+```{r viz-agent, eval=FALSE}
 library(LLMAgentR)
 
 # 1) Load the data
@@ -977,7 +1008,7 @@ Use distinct colors for each Churn group, add clear axis labels, a legend, and a
 final_state <- visualization_agent(initial_state)
 ```
 
-``` r
+```r
 #> ```r
 # 5) View the structure of the final state
 str(final_state)
@@ -1006,7 +1037,21 @@ Saves the interactive plot as a standalone HTML file: "monthly_charges_vs_churn.
 #> ```
 ```
 
+#### Box Plot
+
+<!--html_preserve-->
+<iframe 
+src="inst/assets/monthly_charges_vs_churn.html" 
+style="
+  width:100%;
+  height:300px;
+  /* solid black 2-px border */
+  border:2px solid #000;
+  /* rounded corners */
+  border-radius:4px;
+"></iframe>
+<!--/html_preserve-->
+
 ## License
 
-MIT © [Kwadwo Daddy Nyame Owusu
-Boakye](mailto:kwadwo.owusuboakye@outlook.com)
+MIT © [Kwadwo Daddy Nyame Owusu Boakye](mailto:kwadwo.owusuboakye@outlook.com)

@@ -10,9 +10,10 @@
 #' @importFrom recipes recipe step_rm step_zv step_normalize step_mutate step_dummy update_role
 #' @importFrom utils str head capture.output install.packages
 #' @importFrom purrr map map_chr
-#' @importFrom stats filter
+#' @importFrom stats filter IQR quantile sd
 #' @importFrom DBI dbListTables dbListFields dbGetQuery
 #' @importFrom RSQLite SQLite
+#' @importFrom utils download.file
 NULL
 
 

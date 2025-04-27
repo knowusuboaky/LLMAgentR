@@ -142,7 +142,7 @@ StateGraph <- function() {
 ###############################################################################
 
 interrupt <- function(value) {
-  cat("\n", value, "\n")
+  message("\n", value, "\n")
   readline("Enter your response: ")
 }
 
@@ -154,7 +154,7 @@ make_command <- function(goto = NULL, update = list()) {
 ## 3) NODE FUNCTIONS
 ###############################################################################
 
-# A simple summary function for a data frame
+# Generate Data Frame Summary
 get_dataframe_summary <- function(df, n_sample = 30, skip_stats = FALSE) {
   info <- capture.output(str(df))
   summ <- capture.output(summary(df))
@@ -186,7 +186,7 @@ get_dataframe_summary <- function(df, n_sample = 30, skip_stats = FALSE) {
 }
 
 ###############################################################################
-## 1) GENERIC GRAPH BUILDER (Equivalent to create_coding_agent_graph in Python)
+## GENERIC GRAPH BUILDER
 ###############################################################################
 
 create_coding_agent_graph <- function(
@@ -301,10 +301,13 @@ create_coding_agent_graph <- function(
 ## NODE FUNCTIONS FOR DATA VISUALIZATION
 ###############################################################################
 
-node_recommend_visualization_steps <- function(model) {
+# Node: Recommend Visualization Steps
+node_recommend_visualization_steps <- function(model, verbose = TRUE) {
   function(state) {
-    cat("---DATA VISUALIZATION AGENT----\n")
-    cat("    * RECOMMEND VISUALIZATION STEPS\n")
+    if (verbose) {
+      message("---DATA VISUALIZATION AGENT----")
+      message("    * RECOMMEND VISUALIZATION STEPS")
+    }
 
     user_instructions <- state$user_instructions %||% ""
     recommended_steps_prev <- state$recommended_steps %||% ""
@@ -318,7 +321,120 @@ node_recommend_visualization_steps <- function(model) {
       stop("Invalid data format - must be dataframe or list")
     }
 
-    all_datasets_summary <- get_dataframe_summary(df, skip_stats = TRUE)
+
+    # Convert the raw data into a data frame
+    n_rows <- nrow(df)
+    n_cols <- ncol(df)
+
+    # Overall dataset counts
+    dataset_info <- sprintf(
+      "Dataset dimensions:\n* Rows: %d\n* Columns: %d\n\n",
+      n_rows, n_cols
+    )
+
+    #  Build a super-detailed column-by-column summary
+    col_summaries <- lapply(names(df), function(col) {
+      vec           <- df[[col]]
+      type          <- class(vec)[1]
+      n_missing     <- sum(is.na(vec))
+      pct_missing   <- round(100 * n_missing / n_rows, 2)
+      distinct_vals <- unique(vec)
+      n_distinct    <- length(distinct_vals)
+      pct_unique    <- round(100 * n_distinct / n_rows, 2)
+
+      base_info <- paste0(
+        "* **", col, "** (", type, ")\n",
+        "  - Missing: ", n_missing, " (", pct_missing, "%)\n",
+        "  - Distinct: ", n_distinct, " (", pct_unique, "%)\n"
+      )
+
+      #  Numeric columns
+      if (is.numeric(vec)) {
+        qs      <- quantile(vec, probs = c(0, .25, .5, .75, 1), na.rm = TRUE)
+        mn      <- mean(vec, na.rm = TRUE)
+        sdv     <- sd(vec, na.rm = TRUE)
+        iqr     <- IQR(vec, na.rm = TRUE)
+        med_val <- qs[3]
+
+        # zero/negative
+        n_zero   <- sum(vec == 0, na.rm = TRUE)
+        pct_zero <- round(100 * n_zero / n_rows, 2)
+        n_neg    <- sum(vec < 0, na.rm = TRUE)
+        pct_neg  <- round(100 * n_neg / n_rows, 2)
+
+        # extreme outliers (3 * IQR around median)
+        out_thresh  <- 3 * iqr
+        n_extreme   <- sum((vec < (med_val - out_thresh) | vec > (med_val + out_thresh)), na.rm = TRUE)
+        pct_extreme <- round(100 * n_extreme / n_rows, 2)
+
+        # skewness & excess kurtosis
+        skewness <- if (sdv > 0) mean((vec - mn)^3, na.rm = TRUE) / sdv^3 else NA
+        kurtosis <- if (sdv > 0) mean((vec - mn)^4, na.rm = TRUE) / sdv^4 - 3 else NA
+
+        num_info <- paste0(
+          "  - Min/1st Qu./Median/Mean/3rd Qu./Max:\n",
+          sprintf("    %.3f / %.3f / %.3f / %.3f / %.3f / %.3f\n",
+                  qs[1], qs[2], med_val, mn, qs[4], qs[5]),
+          "  - SD: ", round(sdv, 3), "  IQR: ", round(iqr, 3), "\n",
+          "  - Zeros: ", n_zero, " (", pct_zero, "%)  Negatives: ", n_neg, " (", pct_neg, "%)\n",
+          "  - Extreme (3 X IQR): ", n_extreme, " (", pct_extreme, "%)\n",
+          "  - Skewness: ", round(skewness, 3), "  Excess Kurtosis: ", round(kurtosis, 3), "\n"
+        )
+
+        return(paste0(base_info, num_info))
+      }
+
+      #  Categorical (factor/character)
+      if (is.factor(vec) || is.character(vec)) {
+        tab_no_na <- table(vec, useNA = "no")
+        freqs     <- prop.table(tab_no_na)
+        entropy   <- -sum(freqs * log2(freqs), na.rm = TRUE)
+
+        tab_sorted <- sort(tab_no_na, decreasing = TRUE)
+        top_n      <- head(tab_sorted, 3)
+        top_info   <- paste(
+          sprintf("    %s: %d (%.1f%%)", names(top_n), as.integer(top_n), 100 * as.integer(top_n) / n_rows),
+          collapse = "\n"
+        )
+
+        cat_info <- paste0(
+          "  - Top levels:\n", top_info, "\n",
+          "  - Entropy: ", round(entropy, 3), " bits\n"
+        )
+        return(paste0(base_info, cat_info))
+      }
+
+      #  Logical
+      if (is.logical(vec)) {
+        t_ct      <- sum(vec, na.rm = TRUE)
+        f_ct      <- sum(!vec, na.rm = TRUE)
+        pct_true  <- round(100 * t_ct / n_rows, 2)
+        pct_false <- round(100 * f_ct / n_rows, 2)
+        log_info  <- paste0(
+          "  - TRUE: ", t_ct, " (", pct_true, "%)  FALSE: ", f_ct, " (", pct_false, "%)  NA: ", n_missing, "\n"
+        )
+        return(paste0(base_info, log_info))
+      }
+
+      #  Fallback for other types
+      sample_vals <- if (n_distinct > 10) {
+        paste(head(distinct_vals, 10), collapse = ", ")
+      } else {
+        paste(distinct_vals, collapse = ", ")
+      }
+      fallback_info <- paste0(
+        "  - Sample values: ", sample_vals,
+        if (n_distinct > 10) ", ..." else "", "\n"
+      )
+      paste0(base_info, fallback_info)
+    })
+
+    all_datasets_summary <- paste0(
+      dataset_info,
+      "These are the columns and their detailed statistics:\n\n",
+      paste(col_summaries, collapse = "\n")
+    )
+
 
     prompt <- sprintf(
       "You are a supervisor that is an expert in providing instructions to a chart generator agent for plotting.
@@ -368,12 +484,14 @@ node_recommend_visualization_steps <- function(model) {
   }
 }
 
-node_create_visualization_code <- function(model, function_name = "data_visualization", bypass_recommended_steps = FALSE) {
+# Node: Create Visualization Code
+node_create_visualization_code <- function(model, function_name = "data_visualization",
+                                           bypass_recommended_steps = FALSE, verbose = TRUE) {
   function(state) {
-    if (bypass_recommended_steps) {
-      cat("---DATA VISUALIZATION AGENT----\n")
+    if (bypass_recommended_steps && verbose) {
+      message("---DATA VISUALIZATION AGENT----")
     }
-    cat("    * CREATE VISUALIZATION CODE\n")
+    if (verbose) message("    * CREATE VISUALIZATION CODE")
 
     if (bypass_recommended_steps) {
       data_raw <- state$data_raw
@@ -391,52 +509,81 @@ node_create_visualization_code <- function(model, function_name = "data_visualiz
     }
 
     prompt <- sprintf(
-      "You are a chart generator agent that is an expert in generating plotly charts in R. You must use plotly or ggplot2 to produce plots.
+      paste0(
+        "You are a Chart-Generator Agent who writes production-grade R code that\n",
+        "creates interactive visualizations with **plotly** (preferred) or\n",
+        "**ggplot2** wrapped in ggplotly().\n\n",
 
-      Your job is to produce R code to generate visualizations with a function named %s.
+        "========================  CHART INSTRUCTIONS  ========================\n",
+        "%s\n\n",
+        "===============================  DATA  ===============================\n",
+        "%s\n",
+        "======================================================================\n\n",
 
-      You will take instructions from a Chart Instructor and generate a plotly chart from the data provided.
+        "OBJECTIVE\n",
+        "Write ONE fenced R code block that defines the function  %s(data_raw).\n",
+        "The function must:\n",
+        "  - Load required packages INSIDE the body (plotly, ggplot2, dplyr).\n",
+        "  - Accept either a data.frame *or* a list of data.frames.\n",
+        "    If a list is given, return a list of plotly objects (same order).\n",
+        "  - Coerce non-data.frame input with as.data.frame().\n",
+        "  - Contain stopifnot(is.data.frame(data_raw)) for the single-df path.\n",
+        "  - Wrap risky code in tryCatch(); on failure stop('Chart failed: ', msg).\n",
+        "  - Use only ASCII identifiers and strings (CRAN portable).\n",
+        "  - Perform no file I/O (ggsave, write.csv, etc.).\n",
+        "  - Return the plotly object(s) as the final expression.\n",
+        "  - Include clear comments for each non-trivial step.\n",
+        "  - Be idempotent (two identical runs -> identical plots).\n",
+        "  - Everything must be inside ONE fenced R block; no prose outside.\n\n",
 
-      CHART INSTRUCTIONS:
-      %s
+        "============================  CODE SKELETON  =========================\n",
+        "```r\n",
+        "%s <- function(data_raw) {\n",
+        "  # 0. Packages ------------------------------------------------------\n",
+        "  pkgs <- c('plotly', 'ggplot2', 'dplyr')\n",
+        "  sapply(pkgs, function(p) {\n",
+        "    if (!requireNamespace(p, quietly = TRUE))\n",
+        "      stop(sprintf('Package \"%%s\" is required but not installed', p))\n",
+        "    library(p, character.only = TRUE, quietly = TRUE, warn.conflicts = FALSE)\n",
+        "  })\n\n",
+        "  # Helper: build one chart for a single data.frame ------------------\n",
+        "  build_one <- function(df) {\n",
+        "    stopifnot(is.data.frame(df))\n",
+        "    # === USER CHART LOGIC STARTS HERE ==============================\n",
+        "    # Replace the example below with code that satisfies the\n",
+        "    # CHART INSTRUCTIONS section above.  Must return a plotly object.\n",
+        "    plt <- ggplot(df) +\n",
+        "      geom_bar(aes(x = Churn, y = MonthlyCharges), stat = 'identity',\n",
+        "               fill = 'steelblue') +\n",
+        "      labs(title = 'Monthly Charges vs Churn') +\n",
+        "      theme_minimal()\n",
+        "    plotly::ggplotly(plt)\n",
+        "    # === USER CHART LOGIC ENDS HERE ================================\n",
+        "  }\n\n",
+        "  # 1. Dispatch for single df vs list --------------------------------\n",
+        "  if (is.list(data_raw) && !is.data.frame(data_raw)) {\n",
+        "    return(lapply(data_raw, build_one))\n",
+        "  } else {\n",
+        "    return(build_one(as.data.frame(data_raw)))\n",
+        "  }\n",
+        "}\n",
+        "```\n\n",
 
-      DATA:
-      %s
-
-      RETURN:
-
-      Return R code in ```r``` format with a single function definition, %s(data_raw), that includes all imports inside the function.
-
-      Return the plotly chart as a plotly object.
-
-      Return code to provide the data visualization function:
-
-      %s <- function(data_raw) {
-        library(plotly)
-        library(ggplot2)
-        library(dplyr)
-
-        # Convert input to data frame if needed
-        if (!is.data.frame(data_raw)) {
-          data_raw <- as.data.frame(data_raw)
-        }
-
-        # Create visualization here
-        p <- ...
-
-        return(p)
-      }
-
-      Avoid these:
-      1. Do not include steps to save files.
-      2. Do not include unrelated user instructions that are not related to the chart generation.",
-      function_name, chart_generator_instructions, all_datasets_summary, function_name, function_name
+        "===========================  DO NOT DO  ==============================\n",
+        "- Do NOT call ggsave(), write.csv(), or any other file I/O.\n",
+        "- Do NOT add PCA or unrelated steps."
+      ),
+      chart_generator_instructions,   # %s  (first)
+      all_datasets_summary,           # %s  (second)
+      function_name,                  # %s  (third)  -> appears twice more
+      function_name                   # %s  (fourth) -> inside code skeleton
     )
 
+    # Print the resulting prompt
     code_raw <- model(prompt)
 
     # Extract R code from markdown
-    regex_pattern <- "```r(.*#)```"
+    regex_pattern <- "```r(.*?)```"
     match_result <- regexpr(regex_pattern, code_raw, perl = TRUE)
     if (match_result[1] != -1) {
       captured <- regmatches(code_raw, match_result)
@@ -456,115 +603,117 @@ node_create_visualization_code <- function(model, function_name = "data_visualiz
   }
 }
 
-node_execute_visualization_code <- function(state) {
-  cat("    * EXECUTING VISUALIZATION CODE\n")
+# Node: Execute Visualization Code
+node_execute_visualization_code <- function(verbose = TRUE) {
+  function(state) {
+    if (verbose) message("    * EXECUTING VISUALIZATION CODE")
 
-  # 1. Package Management
-  required_packages <- c("plotly", "ggplot2", "dplyr", "stringr")
+    # 1. Package Management
+    required_packages <- c("plotly", "ggplot2", "dplyr")
 
-  # Check and install missing packages
-  missing_pkgs <- setdiff(required_packages, rownames(installed.packages()))
-  if (length(missing_pkgs) > 0) {
-    message("Installing required packages: ", paste(missing_pkgs, collapse = ", "))
-    install.packages(missing_pkgs, quiet = TRUE, repos = "https://cloud.r-project.org")
-  }
+    # Check for missing packages using requireNamespace
+    missing_pkgs <- required_packages[!vapply(required_packages, requireNamespace, logical(1), quietly = TRUE)]
 
-  # Load all packages
-  suppressPackageStartupMessages({
-    invisible(lapply(required_packages, require, character.only = TRUE))
-  })
-
-  # 2. Code Extraction
-  extract_r_code_block <- function(text) {
-    if (is.null(text)) return(NULL)
-
-    # Pattern 1: Triple backtick code blocks
-    pattern_r <- "(#s)```(#:r)#\\s*(.*#)\\s*```"
-    matches_r <- regmatches(text, regexec(pattern_r, text, perl = TRUE))
-    if (length(matches_r) > 0 && length(matches_r[[1]]) >= 2 && nzchar(matches_r[[1]][2])) {
-      return(trimws(matches_r[[1]][2]))
+    if (length(missing_pkgs) > 0) {
+      if (verbose) message("Missing packages: ", paste(missing_pkgs, collapse = ", "))
+      return(list(visualization_error = paste("Missing required packages:", paste(missing_pkgs, collapse = ", "))))
     }
 
-    # Pattern 2: Direct function definition
-    func_name <- state$visualization_function_name %||% "data_visualization"
-    pattern_func <- sprintf("(#s)(%s\\s*<-\\s*function\\s*\\([^\\)]*\\)\\s*\\{.*\\})", func_name)
-    matches_func <- regmatches(text, regexec(pattern_func, text, perl = TRUE))
-    if (length(matches_func) > 0 && length(matches_func[[1]]) >= 2 && nzchar(matches_func[[1]][2])) {
-      return(trimws(matches_func[[1]][2]))
-    }
+    # Load packages silently
+    suppressPackageStartupMessages({
+      invisible(lapply(required_packages, require, character.only = TRUE))
+    })
 
-    warning("Could not extract valid R code from text. Using raw text as code.")
-    return(trimws(text))
-  }
+    # 2. Code Extraction
+    extract_r_code_block <- function(text) {
+      if (is.null(text)) return(NULL)
 
-  # 3. Input Validation
-  if (is.null(state$visualization_function)) {
-    stop("State is missing visualization_function")
-  }
-
-  if (is.null(state$data_raw)) {
-    stop("State is missing input data (data_raw is NULL)")
-  }
-
-  code_snippet <- extract_r_code_block(state$visualization_function)
-  if (is.null(code_snippet) || nchar(code_snippet) == 0) {
-    stop("No R code could be extracted from the visualization function")
-  }
-
-  func_name <- state$visualization_function_name %||% "data_visualization"
-  if (!grepl(paste0(func_name, "\\s*<-\\s*function"), code_snippet)) {
-    stop(sprintf("No valid '%s' function detected in the extracted code.", func_name))
-  }
-
-  # 4. Execution Environment
-  local_env <- new.env(parent = .GlobalEnv)
-
-  # Load all required functions
-  suppressPackageStartupMessages({
-    # Core tidyverse
-    local_env$`%>%` <- magrittr::`%>%`
-
-    # Load functions from all required packages
-    for (pkg in required_packages) {
-      pkg_exports <- getNamespaceExports(pkg)
-      for (f in pkg_exports) {
-        local_env[[f]] <- get(f, envir = getNamespace(pkg))
+      # Pattern 1: Triple backtick code blocks
+      pattern_r <- "(?s)```(?:r)?\\s*(.*?)\\s*```"
+      matches_r <- regmatches(text, regexec(pattern_r, text, perl = TRUE))
+      if (length(matches_r) > 0 && length(matches_r[[1]]) >= 2 && nzchar(matches_r[[1]][2])) {
+        return(trimws(matches_r[[1]][2]))
       }
+
+      # Pattern 2: Direct function definition
+      func_name <- state$visualization_function_name %||% "data_visualization"
+      pattern_func <- sprintf("(?s)(%s\\s*<-\\s*function\\s*\\([^\\)]*\\)\\s*\\{.*\\})", func_name)
+      matches_func <- regmatches(text, regexec(pattern_func, text, perl = TRUE))
+      if (length(matches_func) > 0 && length(matches_func[[1]]) >= 2 && nzchar(matches_func[[1]][2])) {
+        return(trimws(matches_func[[1]][2]))
+      }
+
+      warning("Could not extract valid R code from text. Using raw text as code.")
+      return(trimws(text))
     }
 
-    # Essential base R functions
-    base_funs <- c("c", "list", "data.frame", "as.data.frame", "names",
-                   "colnames", "rownames", "grep", "grepl", "sub", "gsub")
-    for (f in base_funs) {
-      local_env[[f]] <- get(f, envir = baseenv())
-    }
-  })
-
-  # 5. Execution with Improved Input Handling
-  agent_error <- NULL
-  result <- NULL
-
-  tryCatch({
-    # Parse and evaluate the code
-    parsed_code <- parse(text = code_snippet)
-    eval(parsed_code, envir = local_env)
-
-    if (!exists(func_name, envir = local_env) || !is.function(local_env[[func_name]])) {
-      stop(sprintf("'%s' function not found or invalid", func_name))
+    # 3. Input Validation
+    if (is.null(state$visualization_function)) {
+      stop("State is missing visualization_function")
     }
 
-    # Prepare input data
-    input_data <- if (is.data.frame(state$data_raw)) {
-      state$data_raw
-    } else {
-      as.data.frame(state$data_raw)
+    if (is.null(state$data_raw)) {
+      stop("State is missing input data (data_raw is NULL)")
     }
 
-    # Execute with proper error handling
-    res <- tryCatch(
-      do.call(func_name, list(input_data), envir = local_env),
-      error = function(e) stop("Execution failed: ", e$message)
-    )
+    code_snippet <- extract_r_code_block(state$visualization_function)
+    if (is.null(code_snippet) || nchar(code_snippet) == 0) {
+      stop("No R code could be extracted from the visualization function")
+    }
+
+    func_name <- state$visualization_function_name %||% "data_visualization"
+    if (!grepl(paste0(func_name, "\\s*<-\\s*function"), code_snippet)) {
+      stop(sprintf("No valid '%s' function detected in the extracted code.", func_name))
+    }
+
+    # 4. Execution Environment
+    local_env <- new.env(parent = .GlobalEnv)
+
+    # Load all required functions
+    suppressPackageStartupMessages({
+      # Core tidyverse
+      local_env$`%>%` <- magrittr::`%>%`
+
+      # Load functions from all required packages
+      for (pkg in required_packages) {
+        pkg_exports <- getNamespaceExports(pkg)
+        for (f in pkg_exports) {
+          local_env[[f]] <- get(f, envir = getNamespace(pkg))
+        }
+      }
+
+      # Essential base R functions
+      base_funs <- c("c", "list", "data.frame", "as.data.frame", "names",
+                     "colnames", "rownames", "grep", "grepl", "sub", "gsub")
+      for (f in base_funs) {
+        local_env[[f]] <- get(f, envir = baseenv())
+      }
+    })
+
+    # 5. Execution with Improved Input Handling
+    agent_error <- NULL
+    result <- NULL
+
+    tryCatch({
+      # Parse and evaluate the code
+      parsed_code <- parse(text = code_snippet)
+      eval(parsed_code, envir = local_env)
+
+      if (!exists(func_name, envir = local_env) || !is.function(local_env[[func_name]])) {
+        stop(sprintf("'%s' function not found or invalid", func_name))
+      }
+
+      # Prepare input data
+      input_data <- if (is.data.frame(state$data_raw)) {
+        state$data_raw
+      } else {
+        as.data.frame(state$data_raw)
+      }
+
+      # Execute with proper error handling
+      res <- tryCatch(
+        do.call(func_name, list(input_data), envir = local_env),
+        error = function(e) stop("Execution failed: ", e$message))
 
     # Validate output
     if (!inherits(res, "plotly") && !inherits(res, "ggplot")) {
@@ -573,24 +722,28 @@ node_execute_visualization_code <- function(state) {
 
     result <- res
 
-  }, error = function(e) {
-    agent_error <<- paste("Visualization failed:", e$message)
-    cat("ERROR:", agent_error, "\n")
-  })
+    }, error = function(e) {
+      agent_error <<- paste("Visualization failed:", e$message)
+      if (verbose) message("ERROR:", agent_error)
+    })
 
-  # 6. Return Results
-  list(
-    visualization_result = result,
-    visualization_error = agent_error,
-    execution_success = is.null(agent_error),
-    timestamp = Sys.time()
-  )
+# 6. Return Results
+list(
+  visualization_result = result,
+  visualization_error = agent_error,
+  execution_success = is.null(agent_error),
+  timestamp = Sys.time()
+)
+  }
 }
 
-node_fix_visualization_code <- function(model) {
+# Node: Fix Visualization Code
+node_fix_visualization_code <- function(model, verbose = TRUE) {
   function(state) {
-    cat("    * FIX VISUALIZATION CODE\n")
-    cat("      retry_count:", state$retry_count, "\n")
+    if (verbose) {
+      message("    * FIX VISUALIZATION CODE")
+      message("      retry_count:", state$retry_count)
+    }
 
     code_snippet <- state$visualization_function
     error_message <- state$visualization_error
@@ -619,7 +772,7 @@ node_fix_visualization_code <- function(model) {
 
     response <- model(prompt)
 
-    regex_pattern <- "```r(.*#)```"
+    regex_pattern <- "```r(.*?)```"
     match_result <- regexpr(regex_pattern, response, perl = TRUE)
 
     if (match_result[1] != -1) {
@@ -636,12 +789,15 @@ node_fix_visualization_code <- function(model) {
       visualization_function = new_code,
       visualization_error = NULL,
       retry_count = new_retry_val
-    )
-  }
-}
+       )
+     }
+   }
 
-node_explain_visualization_code <- function(model) {
+# Node: Explain Visualization Code
+node_explain_visualization_code <- function(model, verbose = TRUE) {
   function(state) {
+    if (verbose) message("    * EXPLAIN VISUALIZATION CODE")
+
     summary <- if (!is.null(state$visualization_error)) {
       paste("Error occurred:", state$visualization_error)
     } else {
@@ -662,14 +818,17 @@ node_explain_visualization_code <- function(model) {
   }
 }
 
+# Node: Human Review
 node_func_human_review <- function(
     prompt_text,
     yes_goto,
     no_goto,
     user_instructions_key = "user_instructions",
-    recommended_steps_key = "recommended_steps") {
+    recommended_steps_key = "recommended_steps",
+    verbose = TRUE) {
+
   function(state) {
-    cat(" * HUMAN REVIEW\n")
+    if (verbose) message(" * HUMAN REVIEW")
     steps <- if (!is.null(state[[recommended_steps_key]])) state[[recommended_steps_key]] else ""
     prompt_filled <- sprintf(prompt_text, steps)
     user_input <- interrupt(prompt_filled)
@@ -688,27 +847,19 @@ node_func_human_review <- function(
 ###############################################################################
 ## DATA VISUALIZATION AGENT IMPLEMENTATION
 ###############################################################################
-# ------------------------------------------------------------------------------
-#' Build a Data Visualization Agent
+
+#' Build Visualization Agent
 #'
-#' Constructs a state graph-based visualization agent that:
-#' recommends, generates, executes, fixes, and explains charting code using `plotly` or `ggplot2`.
+#' Creates a data visualization agent with configurable workflow steps.
 #'
 #' @name build_visualization_agent
-#' @param model A function that takes a prompt and returns an LLM-generated result.
-#' @param human_validation Logical; enable a manual review step.
-#' @param bypass_recommended_steps Logical; skip initial step recommendation.
-#' @param bypass_explain_code Logical; skip the final explanation step.
-#' @param function_name Name for the generated visualization function (default: `"data_visualization"`).
-#'
-#' @return A callable agent function that mutates the given `state` list.
-#' @examples
-#' \dontrun{
-#' state <- list(data_raw = iris, user_instructions = "Plot Sepal.Length by Species")
-#' agent <- build_visualization_agent(model = call_llm)
-#' agent(state)
-#' print(state$visualization_result)
-#' }
+#' @param model The AI model function to use for code generation
+#' @param human_validation Whether to include human validation step (default: FALSE)
+#' @param bypass_recommended_steps Skip recommendation step (default: FALSE)
+#' @param bypass_explain_code Skip explanation step (default: FALSE)
+#' @param function_name Name for generated visualization function (default: "data_visualization")
+#' @param verbose Whether to print progress messages (default: TRUE)
+#' @return A function that takes state and returns visualization results
 #' @export
 NULL
 
@@ -717,30 +868,29 @@ build_visualization_agent <- function(
     human_validation = FALSE,
     bypass_recommended_steps = FALSE,
     bypass_explain_code = FALSE,
-    function_name = "data_visualization") {
-
-  # Ensure suggested packages are available
-  required_suggested_packages <- c("magrittr", "graphics", "utils", "plotly")
-  invisible(lapply(required_suggested_packages, get_suggested))
+    function_name = "data_visualization",
+    verbose = TRUE) {
 
   # Define node functions list
   node_functions <- list(
-    recommend_visualization_steps = node_recommend_visualization_steps(model),
+    recommend_visualization_steps = node_recommend_visualization_steps(model, verbose),
     human_review = node_func_human_review(
-      prompt_text = "Are the following visualization instructions correct# (Answer 'yes' or provide modifications)\n%s",
+      prompt_text = "Are the following visualization instructions correct? (Answer 'yes' or provide modifications)\n%s",
       yes_goto = if (!bypass_explain_code) "explain_visualization_code" else "__end__",
       no_goto = "recommend_visualization_steps",
       user_instructions_key = "user_instructions",
-      recommended_steps_key = "recommended_steps"
+      recommended_steps_key = "recommended_steps",
+      verbose = verbose
     ),
     create_visualization_code = node_create_visualization_code(
       model = model,
       function_name = function_name,
-      bypass_recommended_steps = bypass_recommended_steps
+      bypass_recommended_steps = bypass_recommended_steps,
+      verbose = verbose
     ),
-    execute_visualization_code = node_execute_visualization_code,
-    fix_visualization_code = node_fix_visualization_code(model),
-    explain_visualization_code = node_explain_visualization_code(model)
+    execute_visualization_code = node_execute_visualization_code(verbose),
+    fix_visualization_code = node_fix_visualization_code(model, verbose),
+    explain_visualization_code = node_explain_visualization_code(model, verbose)
   )
 
   # Create the agent graph

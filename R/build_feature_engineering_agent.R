@@ -142,7 +142,7 @@ StateGraph <- function() {
 ###############################################################################
 
 interrupt <- function(value) {
-  cat("\n", value, "\n")
+  message("\n", value, "\n")
   readline("Enter your response: ")
 }
 
@@ -303,14 +303,14 @@ create_coding_agent_graph <- function(
 
 node_recommend_feature_engineering_steps <- function(model) {
   function(state) {
-    cat("---FEATURE ENGINEERING AGENT----\n")
-    cat("    * RECOMMEND FEATURE ENGINEERING STEPS\n")
+    if (state$verbose) message("---FEATURE ENGINEERING AGENT----\n")
+    if (state$verbose) message("    * RECOMMEND FEATURE ENGINEERING STEPS\n")
 
 
     # 1. Packages
     # Ensure all required packages from Suggests are installed
     required_packages <- c(
-      "stringr", "prrr", "dplyr", "tidyr", "purrr", "lubridate", "forcats",
+      "stringr", "dplyr", "tidyr", "purrr", "lubridate", "forcats",
       "tibble", "magrittr", "recipes", "rsample", "yardstick", "glue", "stats"
     )
 
@@ -328,7 +328,118 @@ node_recommend_feature_engineering_steps <- function(model) {
       stop("Invalid data format - must be dataframe or list")
     }
 
-    all_datasets_summary <- get_dataframe_summary(df, skip_stats = TRUE)
+    # Convert the raw data into a data frame
+    n_rows <- nrow(df)
+    n_cols <- ncol(df)
+
+    # Overall dataset counts
+    dataset_info <- sprintf(
+      "Dataset dimensions:\n* Rows: %d\n* Columns: %d\n\n",
+      n_rows, n_cols
+    )
+
+    #  Build a super-detailed column-by-column summary
+    col_summaries <- lapply(names(df), function(col) {
+      vec           <- df[[col]]
+      type          <- class(vec)[1]
+      n_missing     <- sum(is.na(vec))
+      pct_missing   <- round(100 * n_missing / n_rows, 2)
+      distinct_vals <- unique(vec)
+      n_distinct    <- length(distinct_vals)
+      pct_unique    <- round(100 * n_distinct / n_rows, 2)
+
+      base_info <- paste0(
+        "* **", col, "** (", type, ")\n",
+        "  - Missing: ", n_missing, " (", pct_missing, "%)\n",
+        "  - Distinct: ", n_distinct, " (", pct_unique, "%)\n"
+      )
+
+      #  Numeric columns
+      if (is.numeric(vec)) {
+        qs      <- quantile(vec, probs = c(0, .25, .5, .75, 1), na.rm = TRUE)
+        mn      <- mean(vec, na.rm = TRUE)
+        sdv     <- sd(vec, na.rm = TRUE)
+        iqr     <- IQR(vec, na.rm = TRUE)
+        med_val <- qs[3]
+
+        # zero/negative
+        n_zero   <- sum(vec == 0, na.rm = TRUE)
+        pct_zero <- round(100 * n_zero / n_rows, 2)
+        n_neg    <- sum(vec < 0, na.rm = TRUE)
+        pct_neg  <- round(100 * n_neg / n_rows, 2)
+
+        # extreme outliers (3 X IQR around median)
+        out_thresh  <- 3 * iqr
+        n_extreme   <- sum((vec < (med_val - out_thresh) | vec > (med_val + out_thresh)), na.rm = TRUE)
+        pct_extreme <- round(100 * n_extreme / n_rows, 2)
+
+        # skewness & excess kurtosis
+        skewness <- if (sdv > 0) mean((vec - mn)^3, na.rm = TRUE) / sdv^3 else NA
+        kurtosis <- if (sdv > 0) mean((vec - mn)^4, na.rm = TRUE) / sdv^4 - 3 else NA
+
+        num_info <- paste0(
+          "  - Min/1st Qu./Median/Mean/3rd Qu./Max:\n",
+          sprintf("    %.3f / %.3f / %.3f / %.3f / %.3f / %.3f\n",
+                  qs[1], qs[2], med_val, mn, qs[4], qs[5]),
+          "  - SD: ", round(sdv, 3), "  IQR: ", round(iqr, 3), "\n",
+          "  - Zeros: ", n_zero, " (", pct_zero, "%)  Negatives: ", n_neg, " (", pct_neg, "%)\n",
+          "  - Extreme (3 X IQR): ", n_extreme, " (", pct_extreme, "%)\n",
+          "  - Skewness: ", round(skewness, 3), "  Excess Kurtosis: ", round(kurtosis, 3), "\n"
+        )
+
+        return(paste0(base_info, num_info))
+      }
+
+      #  Categorical (factor/character)
+      if (is.factor(vec) || is.character(vec)) {
+        tab_no_na <- table(vec, useNA = "no")
+        freqs     <- prop.table(tab_no_na)
+        entropy   <- -sum(freqs * log2(freqs), na.rm = TRUE)
+
+        tab_sorted <- sort(tab_no_na, decreasing = TRUE)
+        top_n      <- head(tab_sorted, 3)
+        top_info   <- paste(
+          sprintf("    %s: %d (%.1f%%)", names(top_n), as.integer(top_n), 100 * as.integer(top_n) / n_rows),
+          collapse = "\n"
+        )
+
+        cat_info <- paste0(
+          "  - Top levels:\n", top_info, "\n",
+          "  - Entropy: ", round(entropy, 3), " bits\n"
+        )
+        return(paste0(base_info, cat_info))
+      }
+
+      #  Logical
+      if (is.logical(vec)) {
+        t_ct      <- sum(vec, na.rm = TRUE)
+        f_ct      <- sum(!vec, na.rm = TRUE)
+        pct_true  <- round(100 * t_ct / n_rows, 2)
+        pct_false <- round(100 * f_ct / n_rows, 2)
+        log_info  <- paste0(
+          "  - TRUE: ", t_ct, " (", pct_true, "%)  FALSE: ", f_ct, " (", pct_false, "%)  NA: ", n_missing, "\n"
+        )
+        return(paste0(base_info, log_info))
+      }
+
+      #  Fallback for other types
+      sample_vals <- if (n_distinct > 10) {
+        paste(head(distinct_vals, 10), collapse = ", ")
+      } else {
+        paste(distinct_vals, collapse = ", ")
+      }
+      fallback_info <- paste0(
+        "  - Sample values: ", sample_vals,
+        if (n_distinct > 10) ", ..." else "", "\n"
+      )
+      paste0(base_info, fallback_info)
+    })
+
+    all_datasets_summary <- paste0(
+      dataset_info,
+      "These are the columns and their detailed statistics:\n\n",
+      paste(col_summaries, collapse = "\n")
+    )
 
     prompt <- sprintf(
       "You are a Feature Engineering Expert. Given the following information about the data,
@@ -339,22 +450,22 @@ node_recommend_feature_engineering_steps <- function(model) {
       General Steps:
       Things that should be considered in the feature engineering steps:
 
-      * Convert features to the appropriate data types based on their sample data values
-      * Remove string or categorical features with unique values equal to the size of the dataset
-      * Remove constant features with the same value in all rows
-      * High cardinality categorical features should be encoded by a threshold <= 5 percent of the dataset, by converting infrequent values to \"other\"
-      * Encoding categorical variables using OneHotEncoding
-      * Numeric features should be left untransformed
-      * Create datetime-based features if datetime columns are present
-      * If a target variable is provided:
-          * If a categorical target variable is provided, encode it using LabelEncoding
-          * All other target variables should be converted to numeric and unscaled
-      * Convert any Boolean (True/False) values to integer (1/0) values. This should be performed after one-hot encoding.
+      - Convert features to the appropriate data types based on their sample data values
+      - Remove string or categorical features with unique values equal to the size of the dataset
+      - Remove constant features with the same value in all rows
+      - High cardinality categorical features should be encoded by a threshold <= 5 percent of the dataset, by converting infrequent values to \"other\"
+      - Encoding categorical variables using OneHotEncoding
+      - Numeric features should be left untransformed
+      - Create datetime-based features if datetime columns are present
+      - If a target variable is provided:
+          - If a categorical target variable is provided, encode it using LabelEncoding
+          - All other target variables should be converted to numeric and unscaled
+      - Convert any Boolean (True/False) values to integer (1/0) values. This should be performed after one-hot encoding.
 
       Custom Steps:
-      * Analyze the data to determine if any additional feature engineering steps are needed.
-      * Recommend steps that are specific to the data provided. Include why these steps are necessary or beneficial.
-      * If no additional steps are needed, simply state that no additional steps are required.
+      - Analyze the data to determine if any additional feature engineering steps are needed.
+      - Recommend steps that are specific to the data provided. Include why these steps are necessary or beneficial.
+      - If no additional steps are needed, simply state that no additional steps are required.
 
       IMPORTANT:
       Make sure to take into account any additional user instructions that may add, remove or modify some of these steps.
@@ -386,104 +497,155 @@ node_recommend_feature_engineering_steps <- function(model) {
   }
 }
 
-node_create_feature_engineering_code <- function(model, bypass_recommended_steps = FALSE) {
+
+node_create_feature_engineering_code <- function(model,
+                                                 bypass_recommended_steps = FALSE) {
   function(state) {
-    if (bypass_recommended_steps) {
-      cat("---FEATURE ENGINEERING AGENT----\n")
-    }
-    cat("    * CREATE FEATURE ENGINEERING CODE\n")
+    if (bypass_recommended_steps && isTRUE(state$verbose))
+      message("---FEATURE ENGINEERING AGENT----")
+    if (isTRUE(state$verbose))
+      message("    * CREATE FEATURE ENGINEERING CODE")
 
-    recommended_steps <- if (!is.null(state$recommended_steps)) state$recommended_steps else ""
-    all_datasets_summary <- if (!is.null(state$all_datasets_summary)) state$all_datasets_summary else "No dataset summary available."
-    target_variable <- state$target_variable %||% "None provided"
+    #  Gather state
+    recommended_steps    <- state$recommended_steps    %||% ""
+    all_datasets_summary <- state$all_datasets_summary %||% "No dataset summary."
+    target_variable      <- state$target_variable      %||% "None provided"
+    user_instructions    <- state$user_instructions %||% ""
 
-    prompt <- sprintf(
-      "You are a Feature Engineering Agent. Your job is to create a feature_engineer() function that can be run on the data provided using the following recommended steps.
+    #  Prompt (built with paste0 to avoid %% issues)
+    prompt <- paste0(
+      "\nROLE: Principal Feature-Engineering Architect\n\n",
 
-      Recommended Steps:
-      %s
+      "=========================== DATA CONTEXT ============================\n",
+      "Target variable: ", target_variable, "\n\n",
+      all_datasets_summary, "\n",
+      "======================== RECOMMENDED STEPS ==========================\n",
+      recommended_steps, "\n",
+      "=====================================================================\n\n",
 
-      Use this information about the data to help determine how to feature engineer the data:
+      "OBJECTIVE\n",
+      "Return ONE fenced R block containing\n",
+      "  clean_names(), safe_select(), safe_dummy_cols(), safe_lump_high_card(),\n",
+      "  feature_engineer(data_raw) and nothing else.\n\n",
 
-      Target Variable (if provided): %s
+      "==================== NON-NEGOTIABLE REQUIREMENTS ====================\n",
+      "1. Pure: exactly one data.frame; no printing or I/O.\n",
+      "2. All packages loaded INSIDE feature_engineer().\n",
+      "3. Script parses via source(textConnection(<output>)).\n",
+      "4. No placeholders; helpers fully implemented.\n",
+      "5. tryCatch() around risky blocks; propagate via stop().\n",
+      "6. Idempotent output.\n",
+      "7. Lint-free under lintr::default_linters.\n",
+      "8. Tidyverse style (snake_case, <-, 2-space indent).\n",
+      "9. Explicit namespaces.\n",
+      "10. At least one stopifnot().\n",
+      "11. Memory-safe for nrow > 1e6 (data.table := if needed).\n",
+      "12. One-hot encode EVERY factor/character column, always.\n",
+      "13. PCA forbidden no PC1/PC2/PC3.\n",
+      "14. Column names ->  clean_names()  after all encoding.\n",
+      "15. Helpers + main function MUST be in the same code fence.\n\n",
 
-      Data Summary:
-      %s
+      "=========================== CODE TEMPLATE ===========================\n",
+      "```r\n",
+      "# --- Helper: clean_names (safe ASCII, keeps words) ---------------\n",
+      "clean_names <- function(x) {\n",
+      "  x <- make.names(x, unique = TRUE)\n",
+      "  x <- iconv(x, to = 'ASCII', sub = '_')\n",
+      "  x <- gsub('\\u002E', '_', x, fixed = TRUE)   # literal dot -> underscore\n",
+      "  x <- gsub('_+', '_', x)                      # collapse runs of '_'\n",
+      "  x <- sub('^_+', '', sub('_+$', '', x))       # trim edges\n",
+      "  x\n",
+      "}\n\n",
+      "# --- Helper: safe_select -----------------------------------------\n",
+      "safe_select <- function(df, cols) {\n",
+      "  if (!is.data.frame(df)) df <- as.data.frame(df)\n",
+      "  cols <- intersect(cols, names(df))\n",
+      "  if (length(cols) == 0) return(df)\n",
+      "  dplyr::select(df, dplyr::all_of(cols))\n",
+      "}\n\n",
+      "# --- Helper: safe_dummy_cols -------------------------------------\n",
+      "safe_dummy_cols <- function(df, cols, ...) {\n",
+      "  cols <- intersect(cols, names(df))\n",
+      "  if (length(cols) == 0) return(df)\n",
+      "  fastDummies::dummy_cols(df, select_columns = cols, ...)\n",
+      "}\n\n",
+      "# --- Helper: safe_lump_high_card ---------------------------------\n",
+      "safe_lump_high_card <- function(df, thresh = 0.05) {\n",
+      "  for (col in names(Filter(is.factor, df))) {\n",
+      "    tot <- nrow(df)\n",
+      "    freq <- dplyr::count(df, !!rlang::sym(col), name = 'n')\n",
+      "    drop <- freq[[1]][ freq[['n']] / tot < thresh ]\n",
+      "    if (length(drop) > 0) {\n",
+      "      df[[col]] <- forcats::fct_other(df[[col]], keep = setdiff(levels(df[[col]]), drop))\n",
+      "    }\n",
+      "  }\n",
+      "  df\n",
+      "}\n\n",
+      "# --- Main: feature_engineer --------------------------------------\n",
+      "feature_engineer <- function(data_raw) {\n",
+      "  ## 0  Packages --------------------------------------------------\n",
+      "  pkgs <- c('dplyr','tidyr','stringr','forcats','lubridate',\n",
+      "            'fastDummies','tibble','magrittr','purrr','stats','data.table')\n",
+      "  sapply(pkgs, function(p) {\n",
+      "    if (!requireNamespace(p, quietly = TRUE))\n",
+      "      stop(sprintf('Package \"%s\" required but not installed', p))\n",
+      "    library(p, character.only = TRUE, quietly = TRUE, warn.conflicts = FALSE)\n",
+      "  })\n\n",
+      "  ## 1  Coerce ----------------------------------------------------\n",
+      "  if (!is.data.frame(data_raw)) data_raw <- as.data.frame(data_raw)\n\n",
+      "  ## 2  Characters -> factors ------------------------------------\n",
+      "  chr <- names(Filter(is.character, data_raw))\n",
+      "  data_raw[chr] <- lapply(data_raw[chr], forcats::as_factor)\n\n",
+      "  ## 3  Lump high-cardinality ------------------------------------\n",
+      "  data_raw <- safe_lump_high_card(data_raw, 0.05)\n\n",
+      "  ## 4  One-hot encode all factors -------------------------------\n",
+      "  fac <- names(Filter(is.factor, data_raw))\n",
+      "  data_raw <- safe_dummy_cols(data_raw, fac,\n",
+      "                              remove_first_dummy = FALSE,\n",
+      "                              remove_selected_columns = TRUE)\n",
+      "  data_raw <- as.data.frame(data_raw)\n",
+      "  names(data_raw) <- clean_names(names(data_raw))\n\n",
+      "  ## 5  Datetime enrichment -------------------------------------\n",
+      "  dt <- names(Filter(function(x) inherits(x, c('Date','POSIXct','POSIXlt')), data_raw))\n",
+      "  for (col in dt) {\n",
+      "    data_raw <- dplyr::mutate(data_raw,\n",
+      "      !!paste0(col,'_year')  := lubridate::year(.data[[col]]),\n",
+      "      !!paste0(col,'_month') := lubridate::month(.data[[col]]),\n",
+      "      !!paste0(col,'_wday')  := lubridate::wday(.data[[col]]))\n",
+      "  }\n\n",
+      "  ## 6  Drop constants & IDs -------------------------------------\n",
+      "  const <- names(Filter(function(x) dplyr::n_distinct(x, na.rm = TRUE) == 1, data_raw))\n",
+      "  ids   <- names(Filter(function(x) dplyr::n_distinct(x, na.rm = TRUE) == nrow(data_raw), data_raw))\n",
+      "  data_raw <- safe_select(data_raw, setdiff(names(data_raw), c(constant = const, ids = ids)))\n\n",
+      "  ## 7  Checks ----------------------------------------------------\n",
+      "  stopifnot(is.data.frame(data_raw), nrow(data_raw) > 0, ncol(data_raw) > 0)\n",
+      "  if (identical(Sys.getenv('FE_TEST'), '1')) message('Self-test OK')\n",
+      "  data_raw\n",
+      "}\n",
+      "```\n\n",
 
-      Return R code in ```r``` format with a single function definition, feature_engineer(data_raw), that includes all package checks and loading inside the function.
-
-      The function should:
-      - Take a data frame or list as input
-      - Include proper package requirement checks
-      - Handle all feature engineering steps
-      - Return a single engineered data frame
-
-      Example structure:
-      ```r
-      feature_engineer <- function(data_raw) {
-
-        # Step 0: Check and load required packages
-        required_packages <- c(
-          'dplyr', 'tidyr', 'purrr', 'stringr',
-          'lubridate', 'forcats', 'tibble', 'magrittr',
-          'recipes', 'rsample', 'yardstick',
-          'glue', 'stats'
-        )
-
-        for (pkg in required_packages) {
-          if (!requireNamespace(pkg, quietly = TRUE)) {
-            stop(sprintf(\"Package '%%s' is required but not installed.\", pkg))
-          }
-          library(pkg, character.only = TRUE)
-        }
-
-
-        # Convert input to data frame if needed
-        if (!is.data.frame(data_raw)) {
-          data_raw <- as.data.frame(data_raw)
-        }
-
-        # Implement feature engineering steps here
-
-        return(data_engineered)
-      }
-      ```
-
-      Best Practices and Error Preventions
-      - Validate input structure early: Ensure input is a data.frame or coercible to one, and fail fast if not.
-      - Handle missing values before applying transformations like factor conversion or scaling:
-      - Use appropriate imputation strategies for numeric (mean, median, etc.) and categorical (mode, etc.) features.
-      - Convert logical (Boolean) values to integers (0/1) early, especially before modeling or encoding steps.
-      - Avoid introducing highly correlated features (e.g., redundant dummies or engineered variables) unless explicitly required.
-      - Exclude identifier fields (e.g., ID, record_id) from transformations like factor conversion or normalization.
-      - Avoid transforming constant features, as they provide no predictive power.
-      - Include clear, consistent comments to explain each transformation step for reproducibility and team clarity.
-      - Design transformation pipelines to be idempotent (i.e., repeatable with consistent results on the same input).
-      - Use tryCatch() and defensive programming to catch and explain common user errors early.
-      - Document optional transformations, such as handling of missing values, for flexible customization.
-
-      Return only the R function code wrapped in triple backticks.",
-      recommended_steps, target_variable, all_datasets_summary
+      "=========================== OUTPUT FORMAT ===========================\n",
+      "Return ONE fenced R block (no prose) with all four functions above.\n",
+      "Must be ASCII-only; PCA strictly banned; one-hot encoding mandatory.\n"
     )
 
+    #   LLM CALL
     code_raw <- model(prompt)
 
-    # Extract R code from markdown
-    regex_pattern <- "```r(.*#)```"
-    match_result <- regexpr(regex_pattern, code_raw, perl = TRUE)
-    if (match_result[1] != -1) {
-      captured <- regmatches(code_raw, match_result)
-      code_extracted <- gsub("```r|```", "", captured)
-      code_extracted <- trimws(code_extracted)
+    # Extract fenced R code
+    pat <- "(?s)```\\s*r?\\s*\\n(.*?)\\n```"
+    hit <- regexec(pat, code_raw, perl = TRUE)
+    cap <- regmatches(code_raw, hit)
+    code_extracted <- if (length(cap) && length(cap[[1]]) >= 2) {
+      trimws(cap[[1]][2])
     } else {
-      code_extracted <- trimws(code_raw)
+      trimws(code_raw)
     }
-
-    # Remove any stray triple backticks
-    code_extracted <- gsub("```+", "", code_extracted)
+    code_extracted <- gsub("^```.*$", "", code_extracted)
+    code_extracted <- gsub("```$",     "", code_extracted)
 
     list(
-      feature_engineer_function = code_extracted,
+      feature_engineer_function      = code_extracted,
       feature_engineer_function_path = NULL,
       feature_engineer_function_name = "feature_engineer"
     )
@@ -491,199 +653,216 @@ node_create_feature_engineering_code <- function(model, bypass_recommended_steps
 }
 
 node_execute_feature_engineering_code <- function(state) {
-  cat("    * EXECUTING FEATURE ENGINEERING CODE\n")
+  if (isTRUE(state$verbose))
+    message("    * EXECUTING FEATURE ENGINEERING CODE")
 
-  # 1. Package Management
+  ## 1. Package management
   required_packages <- c(
-    # Tidyverse core
-    "dplyr", "tidyr", "purrr", "stringr",
-    "lubridate", "forcats", "tibble", "magrittr",
-    # Feature engineering
-    "recipes", "rsample", "yardstick",
-    # Additional utilities
-    "glue", "stats"
+    "dplyr","tidyr","purrr","stringr","lubridate","forcats","tibble","magrittr",
+    "recipes","rsample","yardstick","glue","stats","fastDummies"
   )
 
-  # Check and install missing packages
-  missing_pkgs <- setdiff(required_packages, rownames(installed.packages()))
+  # Check for missing packages using requireNamespace
+  missing_pkgs <- required_packages[!vapply(required_packages, requireNamespace, logical(1), quietly = TRUE)]
+
   if (length(missing_pkgs) > 0) {
-    message("Installing required packages: ", paste(missing_pkgs, collapse = ", "))
-    install.packages(missing_pkgs, quiet = TRUE, repos = "https://cloud.r-project.org")
+    if (state$verbose) message("Missing packages: ", paste(missing_pkgs, collapse = ", "))
+    return(list(feature_engineer_error = paste("Missing required packages:", paste(missing_pkgs, collapse = ", "))))
   }
 
-  # Load all packages
+  # Load packages silently
   suppressPackageStartupMessages({
     invisible(lapply(required_packages, require, character.only = TRUE))
   })
 
-  # 2. Code Extraction
-  extract_r_code_block <- function(text) {
-    if (is.null(text)) return(NULL)
-
-    # Pattern 1: Triple backtick code blocks
-    pattern_r <- "(#s)```(#:r)#\\s*(.*#)\\s*```"
-    matches_r <- regmatches(text, regexec(pattern_r, text, perl = TRUE))
-    if (length(matches_r) > 0 && length(matches_r[[1]]) >= 2 && nzchar(matches_r[[1]][2])) {
-      return(trimws(matches_r[[1]][2]))
-    }
-
-    # Pattern 2: Direct function definition
-    pattern_func <- "(#s)(feature_engineer\\s*<-\\s*function\\s*\\([^\\)]*\\)\\s*\\{.*\\})"
-    matches_func <- regmatches(text, regexec(pattern_func, text, perl = TRUE))
-    if (length(matches_func) > 0 && length(matches_func[[1]]) >= 2 && nzchar(matches_func[[1]][2])) {
-      return(trimws(matches_func[[1]][2]))
-    }
-
-    warning("Could not extract valid R code from text. Using raw text as code.")
-    return(trimws(text))
+  ## 2. Helper: pull fenced R code
+  extract_r_code_block <- function(txt) {
+    pat <- "(?s)```\\s*r?\\s*\\n(.*?)\\n```"
+    m   <- regmatches(txt, regexec(pat, txt, perl = TRUE))[[1]]
+    if (length(m) >= 2 && nzchar(m[2])) return(trimws(m[2]))
+    if (grepl("feature_engineer\\s*<-\\s*function", txt)) return(trimws(txt))
+    NULL
   }
 
-  # 3. Input Validation
-  if (is.null(state$feature_engineer_function)) {
-    stop("State is missing feature_engineer_function")
-  }
-
-  if (is.null(state$data_raw)) {
-    stop("State is missing input data (data_raw is NULL)")
-  }
+  if (is.null(state$feature_engineer_function))
+    stop("state$feature_engineer_function is NULL")
+  if (is.null(state$data_raw))
+    stop("state$data_raw is NULL")
 
   code_snippet <- extract_r_code_block(state$feature_engineer_function)
-  if (is.null(code_snippet) || nchar(code_snippet) == 0) {
-    stop("No R code could be extracted from the feature engineer function")
+  if (is.null(code_snippet))
+    stop("Could not locate a fenced code block containing feature_engineer()")
+  if (!grepl("feature_engineer\\s*<-\\s*function", code_snippet))
+    stop("The extracted block does not define feature_engineer()")
+
+  ## 3. Build sandbox env & preload symbols
+  exec_env       <- new.env(parent = baseenv())
+  exec_env$`%>%` <- magrittr::`%>%`
+
+  # load every *exported* object from each required package
+  for (pkg in required_packages) {
+    for (sym in getNamespaceExports(pkg)) {
+      # skip S4 methods / weird objects that error on get()
+      obj <- tryCatch(getExportedValue(pkg, sym), error = function(e) NULL)
+      if (!is.null(obj)) exec_env[[sym]] <- obj
+    }
   }
 
-  if (!grepl("feature_engineer\\s*<-\\s*function", code_snippet)) {
-    stop("No valid 'feature_engineer' function detected in the extracted code.")
-  }
-
-  # 4. Execution Environment
-  #local_env <- new.env(parent = baseenv())
-  local_env <- new.env(parent = .GlobalEnv)  # Changed from baseenv() to .GlobalEnv
-
-
-  # Load all required functions
-  suppressPackageStartupMessages({
-    # Core tidyverse
-    local_env$`%>%` <- magrittr::`%>%`
-
-    # Load functions from all required packages
-    for (pkg in required_packages) {
-      pkg_exports <- getNamespaceExports(pkg)
-      for (f in pkg_exports) {
-        local_env[[f]] <- get(f, envir = getNamespace(pkg))
-      }
-    }
-
-    # Essential base R functions
-    base_funs <- c("c", "list", "data.frame", "as.data.frame", "names",
-                   "colnames", "rownames", "grep", "grepl", "sub", "gsub")
-    for (f in base_funs) {
-      local_env[[f]] <- get(f, envir = baseenv())
-    }
-  })
-
-  # 5. Execution with Improved Input Handling
+  ## 4. Parse, evaluate, run
   agent_error <- NULL
-  result <- NULL
+  engineered  <- NULL
 
   tryCatch({
-    # Parse and evaluate the code
-    parsed_code <- parse(text = code_snippet)
-    eval(parsed_code, envir = local_env)
+    eval(parse(text = code_snippet), envir = exec_env)
 
-    if (!exists("feature_engineer", envir = local_env) || !is.function(local_env$feature_engineer)) {
-      stop("'feature_engineer' function not found or invalid")
-    }
+    if (!exists("feature_engineer", envir = exec_env) ||
+        !is.function(exec_env$feature_engineer))
+      stop("feature_engineer() not found or is not a function after evaluation")
 
-    # Prepare input data
-    input_data <- if (is.data.frame(state$data_raw)) {
-      state$data_raw
-    } else {
-      as.data.frame(state$data_raw)
-    }
+    # Coerce input to plain data.frame
+    input_df <- state$data_raw
+    if (!is.data.frame(input_df)) input_df <- as.data.frame(input_df)
 
-    # Execute with proper error handling
-    res <- tryCatch(
-      local_env$feature_engineer(input_data),
-      error = function(e) stop("Execution failed: ", e$message)
+    engineered <- withCallingHandlers(
+      exec_env$feature_engineer(input_df),
+      error = function(e) {
+        stop("Execution failed inside feature_engineer(): ", e$message, call. = FALSE)
+      }
     )
 
-    # Standardize output
-    result <- if (is.data.frame(res)) {
-      res
-    } else if (is.list(res)) {
-      if (all(sapply(res, is.data.frame))) {
-        do.call(bind_rows, res)
-      } else {
-        as.data.frame(res)
-      }
-    } else {
-      data.frame(result = res)
-    }
+    # Sanity-check output
+    if (!is.data.frame(engineered))
+      stop("feature_engineer() returned an object of class ",
+           paste(class(engineered), collapse = "/"), ", expected data.frame")
+    if (nrow(engineered) == 0 || ncol(engineered) == 0)
+      stop("feature_engineer() returned an empty data.frame")
 
   }, error = function(e) {
     agent_error <<- paste("Feature engineering failed:", e$message)
-    cat("ERROR:", agent_error, "\n")
+    if (isTRUE(state$verbose)) message("ERROR: ", agent_error)
   })
 
-  # 6. Return Results
+  ## 5. Preview & return
+  if (isTRUE(state$verbose) && is.null(agent_error)) {
+    message("      feature_engineer() succeeded; preview:")
+  }
+
   list(
-    data_engineered = result,
+    data_engineered        = engineered,
     feature_engineer_error = agent_error,
-    execution_success = is.null(agent_error),
-    timestamp = Sys.time()
+    execution_success      = is.null(agent_error),
+    timestamp              = Sys.time()
   )
 }
 
 node_fix_feature_engineering_code <- function(model) {
-  function(state) {
-    cat("    * FIX FEATURE ENGINEERING CODE\n")
-    cat("      retry_count:", state$retry_count, "\n")
 
-    code_snippet <- state$feature_engineer_function
-    error_message <- state$feature_engineer_error
-    function_name <- "feature_engineer"
+  # helper
+  extract_code_block <- function(txt) {
+    # 1. Look for a fenced block ```r ```
+    pat  <- "(?s)```\\s*r?\\s*\\n(.*?)\\n```"
+    hit  <- regexec(pat, txt, perl = TRUE)
+    m    <- regmatches(txt, hit)
+    if (length(m) > 0 && length(m[[1]]) >= 2 && nzchar(m[[1]][2]))
+      return(trimws(m[[1]][2]))
+
+    # 2. Fallback: first line that defines the function
+    lines <- strsplit(txt, "\n", fixed = TRUE)[[1]]
+    start <- grep("^\\s*feature_engineer\\s*<-\\s*function", lines)
+    if (length(start) > 0)
+      return(trimws(paste(lines[start:length(lines)], collapse = "\n")))
+
+    NULL
+  }
+
+  #  main closure (called by the graph)
+  function(state) {
+    if (state$verbose) {
+      message("    * FIX FEATURE ENGINEERING CODE")
+      message("      retry_count:", state$retry_count, "\n")
+    }
+
+    code_snippet   <- state$feature_engineer_function
+    error_message  <- state$feature_engineer_error
+    function_name  <- "feature_engineer"   # kept for consistency
 
     prompt <- sprintf(
-      "You are a Feature Engineering Agent. Your job is to fix the feature_engineer() function that currently contains errors.
+      paste0(
+        "You are a Feature-Engineering Fix Agent. The current feature_engineer() ",
+        "function failed with the error shown below. Return ONE fenced R code block ",
+        "that fully replaces the function and embeds the required helpers.\n\n",
 
-      Make sure to only return the function definition for feature_engineer().
+        "===================== BROKEN CODE (please repair) =====================\n",
+        "%s\n\n",
+        "=========================== LAST ERROR ================================\n",
+        "%s\n\n",
 
-      Return R code in ```r``` format with a single function definition, feature_engineer(data_raw), that includes all imports inside the function.
+        "======================== HARD OUTPUT CONTRACT =========================\n",
+        "- Return ONE R code fence only; no prose outside it.\n",
+        "- Inside the fence define, IN THIS ORDER:\n",
+        "    1. clean_names()\n",
+        "    2. safe_select()\n",
+        "    3. safe_dummy_cols()\n",
+        "    4. safe_lump_high_card()\n",
+        "    5. feature_engineer(data_raw)\n",
+        "- feature_engineer() MUST:\n",
+        "    * Do all package checks and library() calls internally.\n",
+        "    * Accept either a single data.frame OR a list of data.frames.\n",
+        "      If a list is given, apply itself to each element and return a list.\n",
+        "    * Convert character columns to factor, lump levels with share <= 5%%\n",
+        "      into 'Other', then ONE-HOT ENCODE EVERY FACTOR (remove_first_dummy = FALSE).\n",
+        "    * Call clean_names() after dummying so column names are ASCII, dots\n",
+        "      replaced by underscores, runs of '_' collapsed, edges trimmed.\n",
+        "    * Drop constant columns (n_distinct == 1) and ID columns\n",
+        "      (n_distinct == nrow).\n",
+        "    * Wrap risky blocks in tryCatch(); on any error use\n",
+        "        stop('Feature engineering failed: ', <msg>).\n",
+        "    * Include clear comments for each non-trivial step.\n",
+        "    * Contain at least one stopifnot() for invariants.\n",
+        "    * Be idempotent (running twice on identical input yields identical output).\n",
+        "- ABSOLUTELY NO PCA (no PC1/PC2/PC3, no prcomp()).\n",
+        "- All identifiers and strings must be pure ASCII.\n\n",
 
-      Important requirements:
-      1. Include all necessary package checks and imports inside the function
-      2. Handle both single dataframe and list of dataframes as input
-      3. Comment all non-trivial steps clearly
-      4. Ensure proper error handling
+        "===================== IMPLEMENTATION NOTES (helpful) ===================\n",
+        "- clean_names() example skeleton:\n",
+        "    clean_names <- function(x) {\n",
+        "      x <- make.names(x, unique = TRUE)\n",
+        "      x <- iconv(x, to = 'ASCII', sub = '_')\n",
+        "      x <- gsub('.', '_', x, fixed = TRUE)\n",
+        "      x <- gsub('_+', '_', x)\n",
+        "      sub('^_+|_+$', '', x)\n",
+        "    }\n",
+        "- safe_dummy_cols() must NOT pass sep = '_' (older fastDummies lacks it).\n",
+        "- For list input use out <- lapply(data_raw, feature_engineer_single).\n\n",
 
-      This is the broken code (please fix):
-      %s
-
-      Last Known Error:
-      %s",
-      code_snippet, error_message
+        "Now produce the single corrected R code block."
+      ),
+      code_snippet,
+      error_message
     )
 
-    response <- model(prompt)
+    # Single LLM call (avoid duplicates)
+    llm_reply <- model(prompt)
 
-    regex_pattern <- "```r(.*#)```"
-    match_result <- regexpr(regex_pattern, response, perl = TRUE)
+    # Try to pull out the corrected code
+    new_code <- extract_code_block(llm_reply)
 
-    if (match_result[1] != -1) {
-      extracted <- regmatches(response, match_result)
-      new_code <- gsub("```r|```", "", extracted)
-      new_code <- trimws(new_code)
-    } else {
-      warning("Could not extract valid R code from LLM response. Returning original snippet.")
+    # If extraction failed or doesn't contain the function, keep the old code
+    if (is.null(new_code) ||
+        !grepl("feature_engineer\\s*<-\\s*function", new_code)) {
+      warning("Could not extract a valid 'feature_engineer' definition; keeping previous code.")
       new_code <- code_snippet
     }
 
-    new_retry_val <- state$retry_count + 1
+    # Strip stray back-ticks / fences, just in case
+    new_code <- gsub("^```.*$", "", new_code)
+    new_code <- gsub("```$",     "", new_code)
+    new_code <- trimws(new_code)
+
     list(
       feature_engineer_function = new_code,
-      feature_engineer_error = NULL,
-      retry_count = new_retry_val
+      feature_engineer_error    = NULL,                      # clear error so Execute retries
+      retry_count               = (state$retry_count %||% 0) + 1
     )
   }
 }
@@ -717,7 +896,7 @@ node_func_human_review <- function(
     user_instructions_key = "user_instructions",
     recommended_steps_key = "recommended_steps") {
   function(state) {
-    cat(" * HUMAN REVIEW\n")
+    if (state$verbose) message(" * HUMAN REVIEW\n")
     steps <- if (!is.null(state[[recommended_steps_key]])) state[[recommended_steps_key]] else ""
     prompt_filled <- sprintf(prompt_text, steps)
     user_input <- interrupt(prompt_filled)
@@ -755,6 +934,7 @@ NULL
 #' @param human_validation Logical; include a manual review node before code execution.
 #' @param bypass_recommended_steps Logical; skip the LLM-based recommendation phase.
 #' @param bypass_explain_code Logical; skip final explanation step.
+#' @param verbose Logical; whether to print progress messages (default: TRUE)
 #'
 #' @return A callable agent function that executes feature engineering via a state graph.
 #' @examples
@@ -775,7 +955,8 @@ build_feature_engineering_agent <- function(
     model,
     human_validation = FALSE,
     bypass_recommended_steps = FALSE,
-    bypass_explain_code = FALSE) {
+    bypass_explain_code = FALSE,
+    verbose = TRUE) {
 
   # Define node functions list
   node_functions <- list(
@@ -816,8 +997,10 @@ build_feature_engineering_agent <- function(
 
   # Return a function that can be invoked with state
   function(state) {
+    state$verbose <- if (!is.null(state$verbose)) state$verbose else verbose
     if (is.null(state$retry_count)) state$retry_count <- 0
     if (is.null(state$max_retries)) state$max_retries <- 3
     app(state)
   }
 }
+

@@ -1,38 +1,53 @@
 # ------------------------------------------------------------------------------
 #' Build an Interpreter Agent
 #'
-#' This agent uses an LLM to interpret various types of output such as plots,
-#' tables, or text-based results. It returns a structured explanation and
-#' takeaways, useful for both technical and non-technical audiences.
+#' Constructs an agent that uses LLM to interpret various outputs (plots, tables,
+#' text results) and provides structured explanations suitable for both technical
+#' and non-technical audiences.
 #'
 #' @name build_interpreter_agent
 #' @param llm A function that accepts a character prompt and returns an LLM response.
-#' @param interpreter_prompt Optional custom prompt template.
-#' @param code_output A string representing the output to interpret (e.g., chart summary, table, etc.).
+#' @param interpreter_prompt Optional custom prompt template (default provides
+#'        structured interpretation framework).
+#' @param code_output The output to interpret (chart summary, table, text results etc.).
+#' @param max_tries Maximum number of attempts for LLM calls (default: 3).
+#' @param backoff Seconds to wait between retries (default: 2).
+#' @param verbose Logical controlling progress messages (default: TRUE).
 #'
-#' @return A list with the full prompt and LLM-generated interpretation.
+#' @return A list containing:
+#' \itemize{
+#'   \item prompt - The full prompt sent to LLM
+#'   \item interpretation - The generated interpretation
+#'   \item success - Logical indicating if interpretation succeeded
+#'   \item attempts - Number of tries made
+#' }
+#'
 #' @examples
 #' \dontrun{
+#' # Interpret ggplot output
+#' plot_summary <- ggplot2::ggplot(mtcars, aes(mpg, hp)) + geom_point()
 #' result <- build_interpreter_agent(
 #'   llm = call_llm,
-#'   code_output = "Explain the results..."
+#'   code_output = capture.output(print(plot_summary))
 #' )
-#' cat(result$interpretation)
 #' }
 #' @export
 NULL
 
-
 build_interpreter_agent <- function(
     llm,
     interpreter_prompt = NULL,
-    code_output
+    code_output,
+    max_tries = 3,
+    backoff = 2,
+    verbose = TRUE
 ) {
-  cat("=== STARTING INTERPRETATION AGENT ===\n")
+  if (verbose) message("=== STARTING INTERPRETATION AGENT ===")
 
-  # 1. Packages
+  # Check for suggested packages
   glue <- get_suggested("glue")
 
+  # Default interpretation prompt template
   if (is.null(interpreter_prompt)) {
     interpreter_prompt <- "
 You are a versatile data interpreter. Your role is to provide clear, insightful, and precise interpretations for various types of outputs, including visual plots, tables, descriptions, and results (regardless of whether they come from R or another source).
@@ -58,15 +73,43 @@ Make sure your interpretation is easy to follow for both technical and non-techn
   # Interpolate code_output into the prompt
   final_prompt <- gsub("\\{code_output\\}", code_output, interpreter_prompt)
 
-  # Call LLM
-  response <- tryCatch({
-    llm(prompt = final_prompt)
-  }, error = function(e) {
-    paste("LLM call failed:", e$message)
-  })
+  # -- Retry LLM interpretation ------------------------------------------
+  response <- NULL
+  error_message <- NULL
+  success <- FALSE
 
+  for (attempt in seq_len(max_tries)) {
+    if (verbose) message(sprintf("Attempt %d/%d", attempt, max_tries))
+
+    attempt_result <- tryCatch({
+      llm_response <- llm(prompt = final_prompt)  # --- FIX --- use final_prompt
+
+      if (is.null(llm_response) || nchar(trimws(llm_response)) == 0) {
+        stop("Empty response received from LLM.")
+      }
+      llm_response
+    }, error = function(e) {
+      if (verbose) warning(sprintf("Attempt %d failed: %s", attempt, e$message))
+      error_message <<- e$message  # store error separately
+      if (attempt < max_tries) Sys.sleep(backoff)
+      NULL
+    })
+
+    if (!is.null(attempt_result)) {
+      response <- attempt_result
+      success <- TRUE
+      break  # --- FIX --- stop if successful
+    }
+  }
+
+  if (verbose && !success) message("Interpretation agent failed after ", max_tries, " attempts.")
+
+  # Return structured response
   list(
-    prompt = final_prompt,
-    interpretation = response
+    prompt         = final_prompt,
+    interpretation = if (success) response else paste("Interpretation failed:", error_message),
+    success        = success,
+    attempts       = attempt
   )
 }
+

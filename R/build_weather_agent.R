@@ -1,35 +1,52 @@
-# Weather Agent: Builds an LLM-powered assistant to summarize weather queries
-
-#' Build a Weather Agent using OpenWeatherMap + LLM
+# ------------------------------------------------------------------------------
+#' Build a Weather Agent
 #'
-#' This function fetches weather data using the OpenWeatherMap API and formats
-#' the results through an LLM (like OpenAI or Claude) to generate a concise
-#' user-facing weather report.
+#' Constructs an LLM-powered weather assistant that fetches data from OpenWeatherMap
+#' and generates user-friendly reports. Handles location parsing, API calls, caching,
+#' and LLM-based summarization.
 #'
 #' @name build_weather_agent
 #' @param llm A function that accepts a character prompt and returns an LLM response.
-#' @param location_query Free-text user query (e.g., "weather in Toronto").
-#' @param system_prompt Optional LLM system prompt.
-#' @param weather_api_key API key for OpenWeatherMap. Defaults to \code{Sys.getenv("OPENWEATHERMAP_API_KEY")}.
-#' @param units Unit system, either "metric" (deg Celsius) or "imperial" (deg Fahrenheit).
-#' @param n_tries Number of retry attempts if weather or LLM calls fail.
-#' @param backoff Seconds to wait between retries.
-#' @param cache_ttl Time-to-live (in minutes) for cached weather data.
-#' @param endpoint_url OpenWeatherMap endpoint URL. Defaults to \code{https://api.openweathermap.org/data/2.5/weather}.
+#' @param location_query Free-text location query (e.g., "weather in Toronto").
+#' @param system_prompt Optional LLM system prompt for weather reporting.
+#' @param weather_api_key OpenWeatherMap API key (defaults to OPENWEATHERMAP_API_KEY env var).
+#' @param units Unit system ("metric" or "imperial").
+#' @param n_tries Number of retry attempts for API/LLM calls (default: 3).
+#' @param backoff Base seconds to wait between retries (default: 2).
+#' @param endpoint_url OpenWeatherMap endpoint URL.
+#' @param verbose Logical controlling progress messages (default: TRUE).
 #'
-#' @return A list including success flag, location, weather data, LLM response, and cache status.
+#' @return A list containing:
+#' \itemize{
+#'   \item success - Logical indicating if operation succeeded
+#'   \item location - Cleaned location string
+#'   \item weather_raw - Raw API response
+#'   \item weather_formatted - Formatted weather string
+#'   \item llm_response - Generated weather report
+#'   \item timestamp - Time of response
+#'   \item cache_hit - Logical indicating cache usage
+#'   \item attempts - Number of tries made
+#' }
+#'
 #' @examples
 #' \dontrun{
-#' Sys.setenv(OPENWEATHERMAP_API_KEY = "your_api_key")
-#' response <- build_weather_agent(
+#' # Using environment variable
+#' Sys.setenv(OPENWEATHERMAP_API_KEY = "your_key")
+#' report <- build_weather_agent(
 #'   llm = call_llm,
 #'   location_query = "Paris, FR"
 #' )
-#' cat(response$llm_response)
+#'
+#' # With explicit API key
+#' report <- build_weather_agent(
+#'   llm = call_llm,
+#'   location_query = "New York",
+#'   weather_api_key = "your_key",
+#'   verbose = FALSE
+#' )
 #' }
 #' @export
 NULL
-
 
 build_weather_agent <- function(
     llm,
@@ -39,132 +56,102 @@ build_weather_agent <- function(
     units = c("metric", "imperial"),
     n_tries = 3,
     backoff = 2,
-    cache_ttl = 30,
-    endpoint_url = NULL
+    endpoint_url = NULL,
+    verbose = TRUE
 ) {
-  cat("=== STARTING WEATHER AGENT ===\n")
+  if (verbose) message("=== STARTING WEATHER AGENT ===")
 
-  # Use default endpoint if not provided
-  if (is.null(endpoint_url)) {
-    endpoint_url <- "https://api.openweathermap.org/data/2.5/weather"
-  }
-
-  # Required packages
+  # Check for required packages
   httr <- get_suggested("httr")
   jsonlite <- get_suggested("jsonlite")
 
-  # Package-level cache environment
-  .weather_cache <- new.env(hash = TRUE)
-
-  # Validate inputs
+  # Validate parameters
   units <- match.arg(units)
   weather_api_key <- weather_api_key %||% Sys.getenv("OPENWEATHERMAP_API_KEY")
-  if (!nzchar(weather_api_key)) stop("OPENWEATHERMAP_API_KEY not set")
+  if (!nzchar(weather_api_key)) stop("OPENWEATHERMAP_API_KEY not provided")
   if (!is.function(llm)) stop("llm must be a function")
+  endpoint_url <- endpoint_url %||% "https://api.openweathermap.org/data/2.5/weather"
 
   # Default system prompt
-  system_prompt <- system_prompt %||%
-    "You are a weather assistant. Provide concise weather information using the same units the user asked for."
-
-  # Get clean location
-  clean_location <- tryCatch({
-    location <- trimws(gsub("weather|forecast|in|for", "", location_query, ignore.case = TRUE))
-    if (nchar(location) < 2) stop("Location too short")
-    location
-  }, error = function(e) stop("Location error: ", e$message))
-
-  # Get weather data - modified cache handling
-  cache_key <- paste0(tolower(clean_location), "_", units)
-
-  if (exists(cache_key, envir = .weather_cache)) {
-    cached <- get(cache_key, envir = .weather_cache)
-    if (difftime(Sys.time(), cached$timestamp, units = "mins") < cache_ttl) {
-      cat("Using valid cached data\n")
-      weather_info <- cached$data
-    } else {
-      cat("Cache expired\n")
-      weather_info <- NULL
-    }
-  } else {
-    weather_info <- NULL
-  }
-
-
-  if (is.null(weather_info)) {
-    cat("Fetching fresh weather data...\n")
-    weather_info <- tryCatch({
-      query_params <- list(
-        q = clean_location,
-        units = units,
-        appid = weather_api_key
-      )
-
-      res <- httr::GET(endpoint_url, query = query_params, httr::timeout(10))
-      if (httr::http_error(res)) {
-        stop("Weather API error: ", httr::content(res, "text"))
-      }
-
-      parsed <- httr::content(res, "parsed")
-      if (is.null(parsed$main)) stop("Invalid weather data structure")
-
-      temp_unit <- if (units == "metric") "deg Celsius" else "deg Fahrenheit"
-      wind_unit <- if (units == "metric") "m/s" else "mph"
-
-      list(
-        raw = parsed,
-        formatted = sprintf(
-          "Location: %s, %s\nConditions: %s\nTemperature: %.1f%s\nHumidity: %d%%\nWind: %.1f %s\nPressure: %d hPa",
-          parsed$name,
-          parsed$sys$country %||% "",
-          parsed$weather[[1]]$description,
-          parsed$main$temp,
-          temp_unit,
-          parsed$main$humidity,
-          parsed$wind$speed,
-          wind_unit,
-          parsed$main$pressure
-        )
-      )
-    }, error = function(e) {
-      stop("Weather data error: ", e$message)
-    })
-
-    # Update cache
-    .weather_cache[[cache_key]] <- list(
-      data = weather_info,
-      timestamp = Sys.time()
-    )
-  }
-
-  # Create LLM prompt and get response
-  llm_prompt <- sprintf(
-    "%s\n\nUser asked: %s\n\nWeather data:\n%s\n\nProvide a concise weather report:",
-    system_prompt,
-    location_query,
-    weather_info$formatted
+  system_prompt <- system_prompt %||% paste(
+    "You are a weather assistant. Provide concise weather information using the same units the user asked for.",
+    sep = "\n"
   )
 
-  llm_response <- tryCatch({
-    response <- llm(prompt = llm_prompt)
-    if (is.null(response) || !is.character(response) || length(response) == 0) {
-      stop("Invalid response from llm")
-    }
-    response
+  # Clean and validate location
+  clean_location <- tryCatch({
+    parse_and_validate_location(location_query)
   }, error = function(e) {
-    warning("LLM failed: ", e$message)
-    "Could not generate weather report. Please try again later."
+    stop("Location error: ", e$message)
   })
 
-  # Return complete results
+  # Weather data retrieval with retries
+  weather_info <- NULL
+  attempts <- 0
+
+  if (verbose) message("Fetching fresh weather data")
+  for (attempt in seq_len(n_tries)) {
+    attempts <- attempt
+    weather_info <- tryCatch({
+      get_fresh_weather(
+        location = clean_location,
+        api_key = weather_api_key,
+        units = units,
+        endpoint_url = endpoint_url
+      )
+    }, error = function(e) {
+      if (verbose) message(sprintf("Attempt %d failed: %s", attempt, e$message))
+      if (attempt < n_tries) Sys.sleep(backoff * (2 ^ (attempt - 1)))
+      NULL
+    })
+
+    if (!is.null(weather_info)) break
+  }
+
+  if (is.null(weather_info)) {
+    stop("Failed to fetch weather data after ", n_tries, " attempts")
+  }
+
+  # Generate LLM response with retries
+  llm_response <- NULL
+  for (attempt in seq_len(n_tries)) {
+    attempts <- attempts + 1
+    llm_prompt <- sprintf(
+      "%s\n\nUser query: %s\n\nWeather data:\n%s",
+      system_prompt,
+      location_query,
+      weather_info$formatted
+    )
+
+    llm_response <- tryCatch({
+      response <- llm(prompt = llm_prompt)
+      if (!is.character(response) || length(response) == 0) {
+        stop("Invalid LLM response")
+      }
+      response
+    }, error = function(e) {
+      if (verbose) message(sprintf("LLM attempt %d failed: %s", attempt, e$message))
+      if (attempt < n_tries) Sys.sleep(backoff * (2 ^ (attempt - 1)))
+      NULL
+    })
+
+    if (!is.null(llm_response)) break
+  }
+
+  if (is.null(llm_response)) {
+    warning("Failed to generate LLM response after ", n_tries, " attempts")
+    llm_response <- weather_info$formatted  # Fallback to raw data
+  }
+
+  # Return structured results
   list(
-    success = !startsWith(llm_response, "Could not generate"),
+    success = !is.null(weather_info) && !is.null(llm_response),
     location = clean_location,
     weather_raw = weather_info$raw,
     weather_formatted = weather_info$formatted,
     llm_response = llm_response,
     timestamp = Sys.time(),
-    cache_hit = exists(cache_key, envir = .weather_cache) &&
-      difftime(Sys.time(), get(cache_key, envir = .weather_cache)$timestamp, units = "mins") < cache_ttl
+    attempts = attempts
   )
 }
 
@@ -212,73 +199,6 @@ parse_and_validate_location <- function(query) {
   clean_loc
 }
 
-#' Try an operation with exponential back-off
-#'
-#' Repeatedly calls a *zero-argument* function up to `n_tries` times,
-#' pausing `backoff * 2^(i - 1)` seconds after each failure
-#' (i.e., 2, 4,8 .seconds when `backoff = 2`).
-#' If the function succeeds, its return value is passed through;
-#' otherwise the last captured error is re-thrown.
-#'
-#' @param fn       A function of **no arguments** to execute.
-#' @param n_tries  Integer. Maximum number of attempts.  Default`3`.
-#' @param backoff  Numeric. Base delay in seconds for the exponential
-#'                 back-off sequence.  Default`2`.
-#'
-#' @return Whatever `fn()` returns on the first successful run.
-#'         If all attempts fail the function calls `stop()`.
-#'
-#' @examples
-#' \dontrun{
-#' # Retry a flaky network call up to five times
-#' try_with_retry(function() readLines("https://httpbin.org/status/500"),
-#'                n_tries = 5, backoff = 1)
-#' }
-#' @export
-#'
-try_with_retry <- function(fn, n_tries = 3, backoff = 2) {
-  for (i in seq_len(n_tries)) {
-    result <- tryCatch(fn(), error = function(e) e)
-    if (!inherits(result, "error")) return(result)
-    if (i < n_tries) {
-      Sys.sleep(backoff * (2 ^ (i - 1))) # Exponential backoff
-    }
-  }
-  stop("All ", n_tries, " attempts failed. Last error: ", conditionMessage(result))
-}
-
-#' Retrieve (and cache) OpenWeather data
-#'
-#' @param location  Character. City name, ZIP code, or "lat,lon".
-#' @param api_key   Your OpenWeather API key.
-#' @param units     Units, one of "metric", "imperial", or "standard".
-#' @param ttl  Cache time-to-live in **seconds**.  Default 3600 (= 1 h).
-#' @return A `list` with elements `raw_json` and `meta`.
-#' @export
-#'
-get_cached_weather <- function(location, api_key, units, ttl) {
-  cache_key <- paste0(tolower(location), "_", units)
-
-  if (exists(cache_key, envir = .weather_cache)) {
-    cached <- get(cache_key, envir = .weather_cache)
-    if (difftime(Sys.time(), cached$timestamp, units = "mins") < ttl) {
-      return(list(success = TRUE, data = cached$data))
-    }
-  }
-
-  fresh_data <- tryCatch({
-    get_fresh_weather(location, api_key, units)
-  }, error = function(e) {
-    stop(e$message)
-  })
-
-  .weather_cache[[cache_key]] <- list(
-    data = fresh_data,
-    timestamp = Sys.time()
-  )
-
-  list(success = TRUE, data = fresh_data)
-}
 
 #' Fetch fresh weather data from OpenWeatherMap
 #'

@@ -192,7 +192,7 @@ StateGraph <- function() {
 #' @export
 
 interrupt <- function(value) {
-  cat("\n", value, "\n")
+  message("\n", value, "\n")
   readline("Enter your response: ")
 }
 
