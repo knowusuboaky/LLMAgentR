@@ -3,13 +3,11 @@
 context("build_feature_engineering_agent()")
 
 library(testthat)
-library(fastDummies)
 
 # ── Skip if required packages absent ──────────────────────────────────────
 for (pkg in c("dplyr", "tidyr", "recipes", "magrittr", "fastDummies")) {
   skip_if_not_installed(pkg)
 }
-
 # ── Fake LLM generator ----------------------------------------------------
 make_fake_model <- function(valid = TRUE) {
 

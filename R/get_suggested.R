@@ -8,7 +8,7 @@ get_suggested <- function(pkg, fun = NULL) {
 
   # Ensure package is available
   if (!requireNamespace(pkg, quietly = TRUE)) {
-    stop(sprintf(
+    warning(sprintf(
       "The '%s' package is required for this functionality. Please install it or move it to Imports.",
       pkg
     ), call. = FALSE)

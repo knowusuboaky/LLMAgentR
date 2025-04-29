@@ -1,7 +1,7 @@
 Package: LLMAgentR
 Type: Package
 Title: Language Model Agents in R for AI Workflows and Research
-Version: 0.2.1
+Version: 0.2.2
 Authors@R: person(given = "Kwadwo Daddy Nyame",
                   family = "Owusu Boakye",
                   email = "kwadwo.owusuboakye@outlook.com",
@@ -58,7 +58,8 @@ Suggests:
     tibble,
     lubridate,
     methods,
-    stringr,
     tesseract,
     rvest,
-    fastDummies
+    fastDummies,
+    stringr
+
