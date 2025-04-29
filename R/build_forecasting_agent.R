@@ -523,15 +523,7 @@ forecast_ts <- function(
 ###############################################################################
 ## PACKAGES FUNCTION
 ###############################################################################
-#' Check Forecasting Dependencies
-#' @keywords internal
-#'
-#' This function ensures that all suggested packages and specific functions used in forecasting
-#' workflows are available at runtime. It assigns each function to a local variable using
-#' `fun <- get_suggested(pkg, fun)` style for runtime access.
-#'
-#' @return Invisibly TRUE if all packages/functions are available or skipped (base).
-#' @export
+
 check_forecasting_dependencies <- function() {
   # Base / utils
   capture.output <- get_suggested("utils", "capture.output")
@@ -1358,7 +1350,8 @@ node_func_human_review <- function(
 #'
 #' # 4) Define the initial state
 #' initial_state <- list(
-#'   user_instructions = "Forecast sales for the next 30 days, using `id` as the grouping variable, a forecasting horizon of 30, and a confidence level of 90%.",
+#'   user_instructions = "Forecast sales for the next 30 days, using `id` as the grouping variable,
+#'   a forecasting horizon of 30, and a confidence level of 90%.",
 #'   data_raw = my_data
 #' )
 #'

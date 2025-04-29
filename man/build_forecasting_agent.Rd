@@ -44,7 +44,8 @@ forecasting_agent <- build_forecasting_agent(
 
 # 4) Define the initial state
 initial_state <- list(
-  user_instructions = "Forecast sales for the next 30 days, using `id` as the grouping variable, a forecasting horizon of 30, and a confidence level of 90\%.",
+  user_instructions = "Forecast sales for the next 30 days, using `id` as the grouping variable,
+  a forecasting horizon of 30, and a confidence level of 90\%.",
   data_raw = my_data
 )
 

@@ -40,7 +40,10 @@ visualization_agent <- build_visualization_agent(
 initial_state <- list(
   data_raw = data,
   target_variable = "Churn",
-  user_instructions = "Create a clean and visually appealing box plot to show the distribution of Monthly Charges across Churn categories. Use distinct colors for each Churn group, add clear axis labels, a legend, and a meaningful title.",
+  user_instructions = "Create a clean and visually appealing box plot to show
+  the distribution of Monthly Charges across Churn categories.
+  Use distinct colors for each Churn group,
+  add clear axis labels, a legend, and a meaningful title.",
   max_retries = 3,
   retry_count = 0
 )

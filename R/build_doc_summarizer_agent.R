@@ -30,7 +30,8 @@
 #' )
 #'
 #' # Summarize document
-#' final_state <- summarizer_agent("https://github.com/knowusuboaky/LLMAgentR/raw/main/tests/testthat/test-data/scrum.docx")
+#' final_state <- summarizer_agent("https://github.com/knowusuboaky/LLMAgentR/raw/main/\
+#' tests/testthat/test-data/scrum.docx")
 #' }
 #' @export
 build_doc_summarizer_agent <- function(
@@ -51,7 +52,7 @@ build_doc_summarizer_agent <- function(
   dplyr     <- get_suggested("dplyr")
   xml2      <- get_suggested("xml2")
   rvest     <- get_suggested("rvest")
-  tesseract <- get_suggested("tesseract")
+  #tesseract <- get_suggested("tesseract")
 
   # OCR fallback for scanned PDFs
   read_pdf_ocr <- function(file) {
@@ -108,6 +109,11 @@ build_doc_summarizer_agent <- function(
         txt_vec <- pdftools::pdf_text(file_path)
         if (all(nchar(txt_vec) == 0)) {
           message("No text layer-running OCR fallback.")
+
+        # only run OCR if tesseract is available
+          if (!requireNamespace("tesseract", quietly = TRUE)) {
+            stop("Install the 'tesseract' package to enable OCR for scanned PDFs.")
+            }
           txt_vec <- read_pdf_ocr(file_path)
         }
         content <- gsub("\n\n+", "\n", paste(txt_vec, collapse = "\n"))

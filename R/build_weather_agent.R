@@ -156,27 +156,6 @@ build_weather_agent <- function(
 
 # Helper Functions
 
-#' Clean and Validate a Location Query
-#' @keywords internal
-#'
-#' Performs basic text cleaning on a free-form weather/location query,
-#' strips out common words like "weather", "forecast", "in", "for", and "please",
-#' then enforces minimal length and alphabetic-only constraints.
-#' If no country code is present, it also suggests the user include one.
-#'
-#' @param query  Character. A free-text user request (e.g. `"weather in Paris"`).
-#'
-#' @return A cleaned location string, suitable for passing to the
-#'         OpenWeatherMap API (e.g. `"Paris, FR"`).  Raises an error if
-#'         the cleaned location is too short or contains digits.
-#'
-#' @examples
-#' parse_and_validate_location("weather in New York")
-#' \dontrun{
-#' parse_and_validate_location("12345")  # error
-#' }
-#'
-#' @export
 parse_and_validate_location <- function(query) {
   # Basic cleaning
   clean_loc <- trimws(gsub("weather|forecast|in|for|please", "", query, ignore.case = TRUE))
@@ -199,27 +178,7 @@ parse_and_validate_location <- function(query) {
 }
 
 
-#' Fetch fresh weather data from OpenWeatherMap
-#' @keywords internal
-#' Internal helper that queries the OpenWeatherMap API and converts the
-#' JSON response into a tidy list containing both the raw payload and a
-#' human-readable summary string.
-#'
-#' @param location      Character. City name, ZIP code, or `"lat,lon"`.
-#' @param api_key       OpenWeatherMap API key.
-#' @param units         Unit system, one of `"metric"`, `"imperial"`,
-#'                      or `"standard"`.
-#' @param endpoint_url  Character. Complete API endpoint URL.
-#'
-#'
-#' @return A named `list` with two elements:
-#'   \itemize{
-#'     \item `raw` - the parsed JSON response.
-#'     \item `formatted` - a concise character string with key weather
-#'           fields for downstream display.
-#'   }
-#' @keywords internal
-#'
+
 get_fresh_weather <- function(location, api_key, units, endpoint_url) {
   res <- httr::GET(
     endpoint_url,

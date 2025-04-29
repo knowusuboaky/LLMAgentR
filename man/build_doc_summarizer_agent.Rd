@@ -48,6 +48,7 @@ summarizer_agent <- build_doc_summarizer_agent(
 )
 
 # Summarize document
-final_state <- summarizer_agent("https://github.com/knowusuboaky/LLMAgentR/raw/main/tests/testthat/test-data/scrum.docx")
+final_state <- summarizer_agent("https://github.com/knowusuboaky/LLMAgentR/raw/main/\
+tests/testthat/test-data/scrum.docx")
 }
 }

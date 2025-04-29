@@ -739,7 +739,9 @@ Last Known Error:
 #'
 #' # 3) Define the initial state
 #' initial_state <- list(
-#'   user_instructions = "Identify the Regions (or Territories) with the highest CustomerCount and TotalSales. Return a table with columns: Region, CustomerCount, and TotalSales.
+#'   user_instructions = "Identify the Regions (or Territories) with the highest
+#'   CustomerCount and TotalSales.
+#'   Return a table with columns: Region, CustomerCount, and TotalSales.
 #' Hint: (UnitPrice × Quantity).",
 #'   max_retries       = 3,
 #'   retry_count       = 0

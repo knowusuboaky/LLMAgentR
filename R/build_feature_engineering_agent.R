@@ -955,7 +955,8 @@ NULL
 #' initial_state <- list(
 #'   data_raw = data,
 #'   target_variable = "Churn",
-#'   user_instructions = "Inspect the data. Make any new features and transformations that you think will be useful for predicting the target variable.",
+#'   user_instructions = "Inspect the data. Make any new features and transformations
+#'   that you think will be useful for predicting the target variable.",
 #'   max_retries = 3,
 #'   retry_count = 0
 #' )

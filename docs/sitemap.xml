@@ -27,7 +27,12 @@
 <url><loc>/reference/get_fresh_weather.html</loc></url>
 <url><loc>/reference/get_suggested.html</loc></url>
 <url><loc>/reference/index.html</loc></url>
+<url><loc>/reference/interrupt.html</loc></url>
+<url><loc>/reference/make_command.html</loc></url>
+<url><loc>/reference/make_edge.html</loc></url>
+<url><loc>/reference/make_node.html</loc></url>
 <url><loc>/reference/parse_and_validate_location.html</loc></url>
+<url><loc>/reference/StateGraph.html</loc></url>
 <url><loc>/reference/state_graph.html</loc></url>
 <url><loc>/reference/try_with_retry.html</loc></url>
 </urlset>
