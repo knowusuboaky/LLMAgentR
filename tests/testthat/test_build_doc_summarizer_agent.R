@@ -5,6 +5,10 @@ context("build_doc_summarizer_agent()")
 library(testthat)
 library(glue)
 library(pdftools)
+library(rvest)
+library(tesseract)
+library(officer)
+library(xml2)
 
 # ── Fake LLMs ────────────────────────────────────────────────────────────
 fake_llm_ok <- function(prompt) "FAKE SUMMARY"

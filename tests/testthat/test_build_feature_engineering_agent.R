@@ -3,6 +3,7 @@
 context("build_feature_engineering_agent()")
 
 library(testthat)
+library(fastDummies)
 
 # ── Skip if required packages absent ──────────────────────────────────────
 for (pkg in c("dplyr", "tidyr", "recipes", "magrittr", "fastDummies")) {
