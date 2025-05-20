@@ -4,52 +4,63 @@
 \alias{build_interpreter_agent}
 \title{Build an Interpreter Agent}
 \arguments{
-\item{llm}{A function that accepts a character prompt and returns an LLM response.}
+\item{llm}{Function that takes \code{prompt} and returns an LLM
+response (may or may not accept \code{verbose}).}
 
-\item{interpreter_prompt}{Optional custom prompt template (default provides
-structured interpretation framework).}
+\item{interpreter_prompt}{Optional template for the prompt (default supplied).}
 
-\item{code_output}{The output to interpret (chart summary, table, text results etc.).}
+\item{code_output}{The output to interpret (plot caption, table text,
+model summary, etc.). **Default \code{NULL}**.}
 
-\item{max_tries}{Maximum number of attempts for LLM calls (default: 3).}
+\item{max_tries}{Max LLM retry attempts (default \code{3}).}
 
-\item{backoff}{Seconds to wait between retries (default: 2).}
+\item{backoff}{Seconds between retries (default \code{2}).}
 
-\item{verbose}{Logical controlling progress messages (default: TRUE).}
+\item{verbose}{Logical; print progress (default \code{TRUE}).}
 }
 \value{
-A list containing:
 \itemize{
-  \item prompt - The full prompt sent to LLM
-  \item interpretation - The generated interpretation
-  \item success - Logical indicating if interpretation succeeded
-  \item attempts - Number of tries made
+  \item If \code{code_output} is \code{NULL}: a \strong{function} (closure).
+  \item Otherwise: a \strong{list} with
+    \describe{
+      \item{prompt}{The full prompt sent to the LLM.}
+      \item{interpretation}{The LLM’s explanation (or error).}
+      \item{success}{Logical; did it succeed?}
+      \item{attempts}{Number of attempts made.}
+    }
 }
 }
 \description{
-Constructs an agent that uses LLM to interpret various outputs (plots, tables,
-text results) and provides structured explanations suitable for both technical
-and non-technical audiences.
+Constructs an LLM-powered agent that explains plots, tables, text, or other
+outputs for both technical and non-technical audiences.
+}
+\details{
+**Two calling patterns**
+\itemize{
+  \item **Builder pattern** – omit \code{code_output}; a reusable
+        \strong{interpreter-agent closure} is returned.
+  \item **One-shot pattern** – provide \code{code_output}; the function runs
+        immediately and returns the interpretation.
+}
 }
 \examples{
 \dontrun{
-# Example table or code output
-output_text <- "
-| Region  | Sales | Profit |
-|---------|-------|--------|
-| North   |  2000 |   300  |
-| South   |  1500 |   250  |
-| East    |  1800 |   400  |
-| West    |  2200 |   100  |
-"
+## 1) Builder pattern --------------------------------------------
+interp <- build_interpreter_agent(llm = my_llm_wrapper, verbose = FALSE)
 
-# Build interpreter agent
-interpreter_agent <- build_interpreter_agent(
-  llm = my_llm_wrapper,
-  code_output = output_text,
-  max_tries = 3,
-  backoff = 2,
-  verbose = FALSE
+table_txt <- "
+| Region | Sales | Profit |
+| North  | 2000  | 300    |
+| South  | 1500  | 250    |"
+
+res1 <- interp(table_txt)
+res2 <- interp("R² = 0.87 for the fitted model …")
+
+## 2) One-shot pattern -------------------------------------------
+build_interpreter_agent(
+  llm         = my_llm_wrapper,
+  code_output = table_txt,
+  verbose     = FALSE
 )
 }
 }

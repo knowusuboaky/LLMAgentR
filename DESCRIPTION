@@ -1,7 +1,7 @@
 Package: LLMAgentR
 Type: Package
 Title: Language Model Agents in R for AI Workflows and Research
-Version: 0.2.2
+Version: 0.3.0
 Authors@R: person(given = "Kwadwo Daddy Nyame",
                   family = "Owusu Boakye",
                   email = "kwadwo.owusuboakye@outlook.com",

@@ -14,7 +14,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-# LLMAgentR <a href="https://knowusuboaky.github.io/LLMAgentR"><img src="man/figures/llmaopenlogo.png" align="right" height="120" /></a>
+# LLMAgentR <a href="https://knowusuboaky.github.io/LLMAgentR/"><img src="man/figures/llmaopenlogo.png" align="right" height="120" /></a>
 
 
 <!-- badges: start -->
@@ -60,73 +60,102 @@ See the full [function reference](https://knowusuboaky.github.io/LLMAgentR/refer
 
 ```{r api-setup, eval=FALSE}
 Sys.setenv(
-  OPENAI_API_KEY = "your-key",
-  GROQ_API_KEY = "your-key",
-  ANTHROPIC_API_KEY = "your-key",
-  TAVILY_API_KEY = "your-key",
-  OPENWEATHERMAP_API_KEY = "your-key"
+  OPENAI_API_KEY     = "your-openai-key",
+  GROQ_API_KEY       = "your-groq-key",
+  ANTHROPIC_API_KEY  = "your-anthropic-key",
+  DEEPSEEK_API_KEY   = "your-deepseek-key",
+  DASHSCOPE_API_KEY  = "your-dashscope-key",
+  GH_MODELS_TOKEN    = "your-github-models-token"
 )
 ```
 
 ---
 
-## LLM Support (Minimal Wrapper)
+## 🔍 LLM Support (Minimal Wrapper)
 
-Load the package and either call an LLM directly or create a reusable wrapper:
+The `chatLLM` package allows you to interact with large language models (LLMs) effortlessly—either through direct calls or via reusable minimal wrappers.
+
+### 📦 Load the Package
 
 ```r
-# Load the chatLLM package
 library(chatLLM)
+```
 
-# Direct call example
+---
+
+### 🧩 Minimal Wrapper Function
+
+Create a lightweight wrapper around `call_llm()` for reuse. It optionally provides verbose output:
+
+```r
+
 call_llm(
-  prompt = "Summarize the capital of France.",
-  provider = "groq",
-  model = "llama3-8b",
+  prompt     = "Summarize the capital of France.",
+  provider   = "groq",
+  model      = "llama3-8b",
   temperature = 0.7,
-  max_tokens = 200
+  max_tokens = 200,
+  verbose = TRUE
 )
 
-# Silent Minimal wrapper around call_llm() with verbose option
 my_llm_wrapper <- function(prompt, verbose = FALSE) {
   if (verbose) {
     message("[my_llm_wrapper] Sending prompt to LLM...")
   }
-  
-  # Suppress only the printing, NOT the return value
+
+  # Suppress console output but always return the response
   response_text <- if (verbose) {
     call_llm(
-      prompt      = prompt,
-      provider    = "openai",
-      model       = "gpt-4o",
-      max_tokens  = 3000
+      prompt     = prompt,
+      provider   = "openai",
+      model      = "gpt-4o",
+      max_tokens = 3000,
+      verbose    = TRUE
     )
   } else {
     suppressMessages(
       suppressWarnings(
         call_llm(
-          prompt      = prompt,
-          provider    = "openai",
-          model       = "gpt-4o",
-          max_tokens  = 3000
+          prompt     = prompt,
+          provider   = "openai",
+          model      = "gpt-4o",
+          max_tokens = 3000,
+          verbose    = TRUE
         )
       )
     )
   }
-  
+
   if (verbose) {
     message("[my_llm_wrapper] Response received.")
   }
-  
+
   return(response_text)
 }
+
+```
+
+---
+
+### 🔁 Quick Access Shortcut
+
+Alternatively, preconfigure an LLM call for one-liners:
+
+```r
+my_llm_wrapper <- call_llm(
+      provider    = "openai",
+      model       = "gpt-4o",
+      max_tokens  = 3000,
+      verbose = TRUE
+)
+
 ```
 
 ---
 
 ## 📦 Related Package: [`chatLLM`](https://cran.r-project.org/package=chatLLM)
 
-The [`chatLLM`](https://github.com/knowusuboaky/chatLLM) package (now available on CRAN 🎉) offers a modular interface for interacting with LLM providers including **OpenAI**, **Groq**, and **Anthropic**.
+The [`chatLLM`](https://github.com/knowusuboaky/chatLLM) package (now available on CRAN 🎉) offers a modular interface for interacting with LLM providers including **OpenAI**, **Groq**, **Anthropic**, **DeepSeek**, **DashScope**, and **GitHub Models**.
 
 ```r
 install.packages("chatLLM")
@@ -143,15 +172,17 @@ library(LLMAgentR)
 
 coder_agent <- build_code_agent(
   llm = my_llm_wrapper,
-  user_input = "Write an R function to standardize numeric columns in a data frame using dplyr.",
   max_tries = 3,
   backoff = 2,
   verbose = FALSE
 )
+
+result <- coder_agent("Write an R function to standardize numeric columns in a data frame using dplyr. No examples or explanation")
+
 ```
 
 ```r
-cat(coder_agent$llm_response)
+cat(result$llm_response)
 #> ```r
 #> library(dplyr)
 #> 
@@ -346,15 +377,16 @@ output_text <- "
 # Build interpreter agent
 interpreter_agent <- build_interpreter_agent(
   llm = my_llm_wrapper,
-  code_output = output_text,
   max_tries = 3,
   backoff = 2,
   verbose = FALSE
 )
+
+result<- interpreter_agent(output_text)
 ```
 
 ```r
-cat(interpreter_agent$interpretation)
+cat(result$interpretation)
 #> **1. Interpretation**:
 #> 
 #> The provided output is a data table detailing sales and profits across four different regions: North, South, East, and West.

@@ -1,46 +1,57 @@
 # ------------------------------------------------------------------------------
 #' Build an Interpreter Agent
 #'
-#' Constructs an agent that uses LLM to interpret various outputs (plots, tables,
-#' text results) and provides structured explanations suitable for both technical
-#' and non-technical audiences.
+#' Constructs an LLM-powered agent that explains plots, tables, text, or other
+#' outputs for both technical and non-technical audiences.
+#'
+#' **Two calling patterns**
+#' \itemize{
+#'   \item **Builder pattern** – omit \code{code_output}; a reusable
+#'         \strong{interpreter-agent closure} is returned.
+#'   \item **One-shot pattern** – provide \code{code_output}; the function runs
+#'         immediately and returns the interpretation.
+#' }
 #'
 #' @name build_interpreter_agent
-#' @param llm A function that accepts a character prompt and returns an LLM response.
-#' @param interpreter_prompt Optional custom prompt template (default provides
-#'        structured interpretation framework).
-#' @param code_output The output to interpret (chart summary, table, text results etc.).
-#' @param max_tries Maximum number of attempts for LLM calls (default: 3).
-#' @param backoff Seconds to wait between retries (default: 2).
-#' @param verbose Logical controlling progress messages (default: TRUE).
+#' @param llm               Function that takes \code{prompt} and returns an LLM
+#'                          response (may or may not accept \code{verbose}).
+#' @param interpreter_prompt Optional template for the prompt (default supplied).
+#' @param code_output        The output to interpret (plot caption, table text,
+#'                          model summary, etc.). **Default \code{NULL}**.
+#' @param max_tries          Max LLM retry attempts (default \code{3}).
+#' @param backoff            Seconds between retries (default \code{2}).
+#' @param verbose            Logical; print progress (default \code{TRUE}).
 #'
-#' @return A list containing:
+#' @return
 #' \itemize{
-#'   \item prompt - The full prompt sent to LLM
-#'   \item interpretation - The generated interpretation
-#'   \item success - Logical indicating if interpretation succeeded
-#'   \item attempts - Number of tries made
+#'   \item If \code{code_output} is \code{NULL}: a \strong{function} (closure).
+#'   \item Otherwise: a \strong{list} with
+#'     \describe{
+#'       \item{prompt}{The full prompt sent to the LLM.}
+#'       \item{interpretation}{The LLM’s explanation (or error).}
+#'       \item{success}{Logical; did it succeed?}
+#'       \item{attempts}{Number of attempts made.}
+#'     }
 #' }
 #'
 #' @examples
 #' \dontrun{
-#' # Example table or code output
-#' output_text <- "
-#' | Region  | Sales | Profit |
-#' |---------|-------|--------|
-#' | North   |  2000 |   300  |
-#' | South   |  1500 |   250  |
-#' | East    |  1800 |   400  |
-#' | West    |  2200 |   100  |
-#' "
+#' ## 1) Builder pattern --------------------------------------------
+#' interp <- build_interpreter_agent(llm = my_llm_wrapper, verbose = FALSE)
 #'
-#' # Build interpreter agent
-#' interpreter_agent <- build_interpreter_agent(
-#'   llm = my_llm_wrapper,
-#'   code_output = output_text,
-#'   max_tries = 3,
-#'   backoff = 2,
-#'   verbose = FALSE
+#' table_txt <- "
+#' | Region | Sales | Profit |
+#' | North  | 2000  | 300    |
+#' | South  | 1500  | 250    |"
+#'
+#' res1 <- interp(table_txt)
+#' res2 <- interp("R² = 0.87 for the fitted model …")
+#'
+#' ## 2) One-shot pattern -------------------------------------------
+#' build_interpreter_agent(
+#'   llm         = my_llm_wrapper,
+#'   code_output = table_txt,
+#'   verbose     = FALSE
 #' )
 #' }
 #' @export
@@ -49,19 +60,21 @@ NULL
 build_interpreter_agent <- function(
     llm,
     interpreter_prompt = NULL,
-    code_output,
-    max_tries = 3,
-    backoff = 2,
-    verbose = TRUE
+    code_output        = NULL,
+    max_tries          = 3,
+    backoff            = 2,
+    verbose            = TRUE
 ) {
-  if (verbose) message("=== STARTING INTERPRETATION AGENT ===")
 
-  # Check for suggested packages
-  glue <- get_suggested("glue")
+  # ----------------------------------------------------------------------
+  run_agent <- function(output) {
+    if (verbose) message("=== STARTING INTERPRETATION AGENT ===")
 
-  # Default interpretation prompt template
-  if (is.null(interpreter_prompt)) {
-    interpreter_prompt <- "
+    glue <- get_suggested("glue")  # optional helper
+
+    # Default interpretation prompt template
+    if (is.null(interpreter_prompt)) {
+      interpreter_prompt <- "
 You are a versatile data interpreter. Your role is to provide clear, insightful, and precise interpretations for various types of outputs, including visual plots, tables, descriptions, and results (regardless of whether they come from R or another source).
 
 Below is an output:
@@ -80,48 +93,49 @@ Please provide:
 - Summarize the most important insights in a concise, accessible way.
 
 Make sure your interpretation is easy to follow for both technical and non-technical audiences."
-  }
+   }
 
-  # Interpolate code_output into the prompt
-  final_prompt <- gsub("\\{code_output\\}", code_output, interpreter_prompt)
+    # Straight substitution, no back-tick wrapping
+    final_prompt <- sub("{code_output}", output, interpreter_prompt, fixed = TRUE)
 
-  # -- Retry LLM interpretation ------------------------------------------
-  response <- NULL
-  error_message <- NULL
-  success <- FALSE
+    response <- NULL; err <- NULL; success <- FALSE
+    for (attempt in seq_len(max_tries)) {
+      if (verbose) message(sprintf("Attempt %d/%d", attempt, max_tries))
 
-  for (attempt in seq_len(max_tries)) {
-    if (verbose) message(sprintf("Attempt %d/%d", attempt, max_tries))
+      attempt_result <- tryCatch({
+        if ("verbose" %in% names(formals(llm))) {
+          llm(prompt = final_prompt, verbose = verbose)
+        } else {
+          llm(prompt = final_prompt)
+        }
+      }, error = function(e) {
+        err <<- e$message
+        if (attempt < max_tries) Sys.sleep(backoff * (2 ^ (attempt - 1)))
+        NULL
+      })
 
-    attempt_result <- tryCatch({
-      llm_response <- llm(prompt = final_prompt)  # --- FIX --- use final_prompt
-
-      if (is.null(llm_response) || nchar(trimws(llm_response)) == 0) {
-        stop("Empty response received from LLM.")
+      if (!is.null(attempt_result) && nzchar(trimws(attempt_result))) {
+        response <- attempt_result
+        success  <- TRUE
+        break
       }
-      llm_response
-    }, error = function(e) {
-      if (verbose) warning(sprintf("Attempt %d failed: %s", attempt, e$message))
-      error_message <<- e$message  # store error separately
-      if (attempt < max_tries) Sys.sleep(backoff)
-      NULL
-    })
-
-    if (!is.null(attempt_result)) {
-      response <- attempt_result
-      success <- TRUE
-      break  # --- FIX --- stop if successful
     }
+
+    list(
+      prompt         = final_prompt,
+      interpretation = if (success) response
+      else paste("Interpretation failed:", err),
+      success        = success,
+      attempts       = attempt
+    )
   }
 
-  if (verbose && !success) message("Interpretation agent failed after ", max_tries, " attempts.")
-
-  # Return structured response
-  list(
-    prompt         = final_prompt,
-    interpretation = if (success) response else paste("Interpretation failed:", error_message),
-    success        = success,
-    attempts       = attempt
-  )
+  # ----------------------------------------------------------------------
+  # Return either a closure (builder) or a result (one-shot)
+  # ----------------------------------------------------------------------
+  if (is.null(code_output)) {
+    function(output) run_agent(output)      # builder pattern
+  } else {
+    run_agent(code_output)                  # one-shot pattern
+  }
 }
-
