@@ -698,32 +698,29 @@ final_state$forecasting_result
 #### Forecast Plot: Light Mode
 
 <!--html_preserve-->
-<iframe 
-src="inst/assets/forecast_light_plot.html" 
-style="
+<iframe src="assets/forecast_light_plot.html" style="
   width:100%;
   height:300px;
   /* solid black 2-px border */
   border:2px solid #000;
   /* rounded corners */
   border-radius:4px;
-"></iframe>
+">
+</iframe>
 <!--/html_preserve-->
-
 
 #### Forecast Plot: Dark Mode
 
 <!--html_preserve-->
-<iframe 
-src="inst/assets/forecast_dark_plot.html" 
-style="
+<iframe src="assets/forecast_dark_plot.html" style="
   width:100%;
   height:300px;
   /* solid black 2-px border */
   border:2px solid #000;
   /* rounded corners */
   border-radius:4px;
-"></iframe>
+">
+</iframe>
 <!--/html_preserve-->
 
 
@@ -1074,16 +1071,15 @@ Saves the interactive plot as a standalone HTML file: "monthly_charges_vs_churn.
 #### Box Plot
 
 <!--html_preserve-->
-<iframe 
-src="inst/assets/monthly_charges_vs_churn.html" 
-style="
+<iframe src="assets/monthly_charges_vs_churn.html" style="
   width:100%;
   height:300px;
   /* solid black 2-px border */
   border:2px solid #000;
   /* rounded corners */
   border-radius:4px;
-"></iframe>
+">
+</iframe>
 <!--/html_preserve-->
 
 ## License
