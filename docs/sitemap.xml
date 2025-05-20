@@ -1,9 +1,12 @@
 <urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
 <url><loc>/404.html</loc></url>
 <url><loc>/authors.html</loc></url>
+<url><loc>/forecast_dark_plot.html</loc></url>
+<url><loc>/forecast_light_plot.html</loc></url>
 <url><loc>/index.html</loc></url>
 <url><loc>/LICENSE-text.html</loc></url>
 <url><loc>/LICENSE.html</loc></url>
+<url><loc>/monthly_charges_vs_churn.html</loc></url>
 <url><loc>/news/index.html</loc></url>
 <url><loc>/reference/build_code_agent.html</loc></url>
 <url><loc>/reference/build_data_cleaning_agent.html</loc></url>
