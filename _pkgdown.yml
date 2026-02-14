@@ -1,4 +1,4 @@
-url: ~
+url: https://knowusuboaky.github.io/LLMAgentR/
 template:
   bootstrap: 5
   update: yes
@@ -7,10 +7,66 @@ template:
     - assets/forecast_dark_plot.html
     - assets/forecast_light_plot.html
 
+navbar:
+  structure:
+    left: [reference, articles, news]
+    right: [search, github, release]
+  components:
+    articles:
+      text: Articles
+      menu:
+        - text: Agent Index
+          href: articles/agent-index.html
+        - text: ---
+        - text: Code Generation Agent
+          href: articles/code-agent.html
+        - text: SQL Query Agent
+          href: articles/sql-agent.html
+        - text: Research Agent
+          href: articles/research-agent.html
+        - text: Interpreter Agent
+          href: articles/interpreter-agent.html
+        - text: Document Summarizer Agent
+          href: articles/document-summarizer-agent.html
+        - text: Data Cleaning Agent
+          href: articles/data-cleaning-agent.html
+        - text: Forecasting Agent
+          href: articles/forecasting-agent.html
+        - text: Data Wrangling Agent
+          href: articles/data-wrangling-agent.html
+        - text: Weather Agent
+          href: articles/weather-agent.html
+        - text: Feature Engineering Agent
+          href: articles/feature-engineering-agent.html
+        - text: Visualization Agent
+          href: articles/visualization-agent.html
+        - text: ---
+        - text: Building Custom Agents
+          href: articles/custom-agents.html
+        - text: Building Multi-Agent Teams
+          href: articles/multi-agent-teams.html
+    github:
+      icon: fa-github
+      href: https://github.com/knowusuboaky/LLMAgentR
+      aria-label: GitHub
+    release:
+      text: 0.3.1c
+
 reference:
   - title: "Functions"
     contents:
       - build_code_agent
+      - build_custom_agent
+      - build_custom_multi_agent
+      - compile_graph
+      - as_mermaid
+      - save_mermaid_png
+      - StateGraph
+      - make_node
+      - make_edge
+      - make_command
+      - interrupt
+      - state_graph_utils
       - build_data_cleaning_agent
       - build_data_wrangling_agent
       - build_doc_summarizer_agent
