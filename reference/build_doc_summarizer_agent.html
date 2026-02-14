@@ -67,7 +67,11 @@ PPTX, TXT, or plain text input and returns structured markdown summaries.</p>
 <span>  summary_template <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  chunk_size <span class="op">=</span> <span class="fl">4000</span>,</span>
 <span>  overlap <span class="op">=</span> <span class="fl">200</span>,</span>
-<span>  verbose <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>  verbose <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  output <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"agent"</span>, <span class="st">"mermaid"</span>, <span class="st">"both"</span><span class="op">)</span>,</span>
+<span>  direction <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"TD"</span>, <span class="st">"LR"</span><span class="op">)</span>,</span>
+<span>  subgraphs <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  style <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -93,6 +97,22 @@ PPTX, TXT, or plain text input and returns structured markdown summaries.</p>
 
 <dt id="arg-verbose">verbose<a class="anchor" aria-label="anchor" href="#arg-verbose"></a></dt>
 <dd><p>Logical controlling progress messages (default: TRUE).</p></dd>
+
+
+<dt id="arg-output">output<a class="anchor" aria-label="anchor" href="#arg-output"></a></dt>
+<dd><p>Output type: "agent" (default), "mermaid" for diagram only, or "both".</p></dd>
+
+
+<dt id="arg-direction">direction<a class="anchor" aria-label="anchor" href="#arg-direction"></a></dt>
+<dd><p>Mermaid diagram direction: "TD" (top-down) or "LR" (left-right).</p></dd>
+
+
+<dt id="arg-subgraphs">subgraphs<a class="anchor" aria-label="anchor" href="#arg-subgraphs"></a></dt>
+<dd><p>Optional named list for grouping nodes in Mermaid diagram.</p></dd>
+
+
+<dt id="arg-style">style<a class="anchor" aria-label="anchor" href="#arg-style"></a></dt>
+<dd><p>Logical; apply default styling to Mermaid diagram (default: TRUE).</p></dd>
 
 </dl></div>
     <div class="section level2">

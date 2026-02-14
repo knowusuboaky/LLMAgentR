@@ -81,45 +81,45 @@ This is the public extension point for creating custom LLMAgentR workflows.</p>
 
 
 <dl><dt id="arg-node-functions">node_functions<a class="anchor" aria-label="anchor" href="#arg-node-functions"></a></dt>
-<dd><p>Named list of node functions. Each function takes <code>state</code>
-and returns a named list or <code><a href="state_graph_utils.html">make_command()</a></code>.</p></dd>
+<dd><p>Named list of node functions. Each function takes `state`
+and returns a named list or [make_command()].</p></dd>
 
 
 <dt id="arg-entry-point">entry_point<a class="anchor" aria-label="anchor" href="#arg-entry-point"></a></dt>
-<dd><p>Name of the start node (must exist in <code>node_functions</code>).</p></dd>
+<dd><p>Name of the start node (must exist in `node_functions`).</p></dd>
 
 
 <dt id="arg-edges">edges<a class="anchor" aria-label="anchor" href="#arg-edges"></a></dt>
-<dd><p>Optional list of static edges. Each item can be:</p><ul><li><p>a character vector of length 2: <code>c("from", "to")</code>, or</p></li>
-<li><p>a list with <code>from</code> and <code>to</code>.</p></li>
-</ul></dd>
+<dd><p>Optional list of static edges. Each item can be:
+- a character vector of length 2: `c("from", "to")`, or
+- a list with `from` and `to`.</p></dd>
 
 
 <dt id="arg-conditional-edges">conditional_edges<a class="anchor" aria-label="anchor" href="#arg-conditional-edges"></a></dt>
-<dd><p>Optional list where each item contains:</p><ul><li><p><code>from</code> (or <code>node_name</code>),</p></li>
-<li><p><code>condition</code> (or <code>condition_fun</code>),</p></li>
-<li><p><code>mapping</code> (or <code>mapping_list</code>) as a named list of label -&gt; node.</p></li>
-</ul></dd>
+<dd><p>Optional list where each item contains:
+- `from` (or `node_name`),
+- `condition` (or `condition_fun`),
+- `mapping` (or `mapping_list`) as a named list of label -&gt; node.</p></dd>
 
 
 <dt id="arg-default-state">default_state<a class="anchor" aria-label="anchor" href="#arg-default-state"></a></dt>
-<dd><p>Optional named list merged into <code>state</code> for missing keys.</p></dd>
+<dd><p>Optional named list merged into `state` for missing keys.</p></dd>
 
 
 <dt id="arg-checkpointer">checkpointer<a class="anchor" aria-label="anchor" href="#arg-checkpointer"></a></dt>
-<dd><p>Optional callback <code>function(state, current_node)</code> executed
+<dd><p>Optional callback `function(state, current_node)` executed
 after each transition.</p></dd>
 
 
 <dt id="arg-output">output<a class="anchor" aria-label="anchor" href="#arg-output"></a></dt>
-<dd><p>Output mode:</p><ul><li><p><code>"agent"</code> (default): return runnable agent function,</p></li>
-<li><p><code>"mermaid"</code>: return Mermaid text only,</p></li>
-<li><p><code>"both"</code>: return list with <code>run</code>, <code>graph</code>, and <code>mermaid</code>.</p></li>
-</ul></dd>
+<dd><p>Output mode:
+- `"agent"` (default): return runnable agent function,
+- `"mermaid"`: return Mermaid text only,
+- `"both"`: return list with `run`, `graph`, and `mermaid`.</p></dd>
 
 
 <dt id="arg-direction">direction<a class="anchor" aria-label="anchor" href="#arg-direction"></a></dt>
-<dd><p>Mermaid direction used when <code>output</code> includes Mermaid.</p></dd>
+<dd><p>Mermaid direction used when `output` includes Mermaid.</p></dd>
 
 
 <dt id="arg-subgraphs">subgraphs<a class="anchor" aria-label="anchor" href="#arg-subgraphs"></a></dt>
@@ -132,11 +132,10 @@ after each transition.</p></dd>
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-
-<ul><li><p>If <code>output = "agent"</code>: a function that accepts <code>state</code> and returns final state.</p></li>
-<li><p>If <code>output = "mermaid"</code>: Mermaid flowchart text.</p></li>
-<li><p>If <code>output = "both"</code>: list with <code>run</code>, <code>graph</code>, and <code>mermaid</code>.</p></li>
-</ul></div>
+    <p>- If `output = "agent"`: a function that accepts `state` and returns final state.
+- If `output = "mermaid"`: Mermaid flowchart text.
+- If `output = "both"`: list with `run`, `graph`, and `mermaid`.</p>
+    </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
@@ -166,6 +165,7 @@ after each transition.</p></dd>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="va">custom</span><span class="op">$</span><span class="va">mermaid</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">custom</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>query <span class="op">=</span> <span class="st">"weather in Accra"</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
+<span class="r-in"><span></span></span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

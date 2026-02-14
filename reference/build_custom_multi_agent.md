@@ -2,7 +2,7 @@
 
 Build a supervisor-routed multi-agent workflow, similar to LangGraph
 team orchestration. The supervisor chooses the next worker by setting
-`state$next` to one of the worker names or `FINISH`.
+\`state\$next\` to one of the worker names or \`FINISH\`.
 
 ## Usage
 
@@ -27,25 +27,16 @@ build_custom_multi_agent(
 
 - supervisor:
 
-  Function that accepts `state` and returns:
-
-  - worker name (character scalar), or
-
-  - list with [`next`](https://rdrr.io/r/base/Control.html), optionally
-    additional updates.
+  Function that accepts \`state\` and returns: - worker name (character
+  scalar), or - list with \`next\`, optionally additional updates.
 
 - workers:
 
-  Named list of workers. Each worker can be:
-
-  - a function that accepts `state` and returns a named list of updates,
-    or
-
-  - a compiled custom-agent object with a callable `$run` function (for
-    example from
-    [`build_custom_agent()`](https://knowusuboaky.github.io/LLMAgentR/reference/build_custom_agent.md)
-    with `output = "both"` or
-    [`compile_graph()`](https://knowusuboaky.github.io/LLMAgentR/reference/as_mermaid.md)).
+  Named list of workers. Each worker can be: - a function that accepts
+  \`state\` and returns a named list of updates, or - a compiled
+  custom-agent object with a callable \`\$run\` function (for example
+  from \[build_custom_agent()\] with \`output = "both"\` or
+  \[compile_graph()\]).
 
 - finish_token:
 
@@ -61,34 +52,30 @@ build_custom_multi_agent(
 
 - worker_error_policy:
 
-  `"return_to_supervisor"` (default) or `"stop"`.
+  \`"return_to_supervisor"\` (default) or \`"stop"\`.
 
 - default_state:
 
-  Optional defaults merged into incoming `state`.
+  Optional defaults merged into incoming \`state\`.
 
 - checkpointer:
 
-  Optional callback `function(state, current_node)`.
+  Optional callback \`function(state, current_node)\`.
 
 - output:
 
-  Output mode:
-
-  - `"agent"` (default): return runnable agent,
-
-  - `"mermaid"`: return Mermaid text,
-
-  - `"both"`: return list with `run`, `graph`, and `mermaid`.
+  Output mode: - \`"agent"\` (default): return runnable agent, -
+  \`"mermaid"\`: return Mermaid text, - \`"both"\`: return list with
+  \`run\`, \`graph\`, and \`mermaid\`.
 
 - direction:
 
-  Mermaid direction when `output` includes Mermaid.
+  Mermaid direction when \`output\` includes Mermaid.
 
 - subgraphs:
 
-  Optional Mermaid subgraph groups. If `NULL`, defaults to
-  `list(Supervisor = "supervisor", Workers = names(workers))`.
+  Optional Mermaid subgraph groups. If \`NULL\`, defaults to
+  \`list(Supervisor = "supervisor", Workers = names(workers))\`.
 
 - style:
 
@@ -96,11 +83,9 @@ build_custom_multi_agent(
 
 ## Value
 
-- If `output = "agent"`: runnable `function(state)`.
-
-- If `output = "mermaid"`: Mermaid text.
-
-- If `output = "both"`: list with `run`, `graph`, and `mermaid`.
+\- If \`output = "agent"\`: runnable function(state). - If \`output =
+"mermaid"\`: Mermaid text. - If \`output = "both"\`: list with \`run\`,
+\`graph\`, and \`mermaid\`.
 
 ## Examples
 

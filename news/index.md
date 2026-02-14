@@ -22,7 +22,7 @@
 
 - **LangGraph-Style Mermaid Export**  
   Added
-  [`compile_graph()`](https://knowusuboaky.github.io/LLMAgentR/reference/as_mermaid.md)
+  [`compile_graph()`](https://knowusuboaky.github.io/LLMAgentR/reference/compile_graph.md)
   and
   [`as_mermaid()`](https://knowusuboaky.github.io/LLMAgentR/reference/as_mermaid.md)
   for Mermaid visualization, including optional subgraph grouping and
@@ -30,7 +30,7 @@
 
 - **PNG Graph Export Utility**  
   Added
-  [`save_mermaid_png()`](https://knowusuboaky.github.io/LLMAgentR/reference/as_mermaid.md)
+  [`save_mermaid_png()`](https://knowusuboaky.github.io/LLMAgentR/reference/save_mermaid_png.md)
   to render Mermaid graph text (or compiled graph objects) into PNG
   files via Mermaid CLI (`mmdc`).
 

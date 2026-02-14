@@ -21,9 +21,9 @@ StateGraph()
 
 - func:
 
-  A function that accepts a `state` list and returns either: 1) a named
-  list of state updates, or 2) a command list created by
-  `make_command()`.
+  A function that accepts a \`state\` list and returns either: 1) a
+  named list of state updates, or 2) a command list created by
+  \[make_command()\].
 
 - name:
 
@@ -39,12 +39,12 @@ StateGraph()
 
 - condition:
 
-  Optional function `function(state)` that returns a label used for
+  Optional function \`function(state)\` that returns a label used for
   conditional routing.
 
 - label:
 
-  Optional label matched against the value returned by `condition`.
+  Optional label matched against the value returned by \`condition\`.
 
 - goto:
 
@@ -60,26 +60,15 @@ StateGraph()
 
 ## Value
 
-`make_node()` returns a list with `func` and `name`.
+A list with \`func\` and \`name\`.
 
-`make_edge()` returns a list with `from`, `to`, `condition`, and
-`label`.
+A list with \`from\`, \`to\`, \`condition\`, and \`label\`.
 
-`make_command()` returns a command-like list with `goto` and `update`.
+A command-like list with \`goto\` and \`update\`.
 
-`interrupt()` returns a character string from
-[`readline()`](https://rdrr.io/r/base/readline.html).
+A character string from \`readline()\`.
 
-`StateGraph()` returns a list with methods:
-
-- `add_node(name, func)`
-
-- `add_edge(from, to)`
-
-- `add_conditional_edges(node_name, condition_fun, mapping_list)`
-
-- `set_entry_point(node_name)`
-
-- `compile(checkpointer = NULL)`
-
-- `END_NODE_NAME`
+A list with methods: - \`add_node(name, func)\` - \`add_edge(from,
+to)\` - \`add_conditional_edges(node_name, condition_fun,
+mapping_list)\` - \`set_entry_point(node_name)\` -
+\`compile(checkpointer = NULL)\` - \`END_NODE_NAME\`

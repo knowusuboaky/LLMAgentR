@@ -147,10 +147,10 @@ writing, QA) to coordinate through a single router node.</p>
 <h2 id="workers-as-custom-agents">Workers As Custom Agents<a class="anchor" aria-label="anchor" href="#workers-as-custom-agents"></a>
 </h2>
 <p>Workers can also be compiled custom-agent objects (for example from
-<code><a href="../reference/as_mermaid.html">compile_graph()</a></code> or
+<code><a href="../reference/compile_graph.html">compile_graph()</a></code> or
 <code>build_custom_agent(..., output = "both")</code>).</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">research_worker</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/as_mermaid.html">compile_graph</a></span><span class="op">(</span></span>
+<code class="sourceCode R"><span><span class="va">research_worker</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile_graph.html">compile_graph</a></span><span class="op">(</span></span>
 <span>  node_functions <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    start <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">state</span><span class="op">)</span> <span class="op">{</span></span>
 <span>      <span class="va">old_log</span> <span class="op">&lt;-</span> <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/NULL.html" class="external-link">is.null</a></span><span class="op">(</span><span class="va">state</span><span class="op">$</span><span class="va">log</span><span class="op">)</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="fl">0</span><span class="op">)</span> <span class="kw">else</span> <span class="va">state</span><span class="op">$</span><span class="va">log</span></span>
@@ -164,7 +164,7 @@ writing, QA) to coordinate through a single router node.</p>
 <span>  entry_point <span class="op">=</span> <span class="st">"start"</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">writer_worker</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/as_mermaid.html">compile_graph</a></span><span class="op">(</span></span>
+<span><span class="va">writer_worker</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile_graph.html">compile_graph</a></span><span class="op">(</span></span>
 <span>  node_functions <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    start <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">state</span><span class="op">)</span> <span class="op">{</span></span>
 <span>      <span class="va">old_log</span> <span class="op">&lt;-</span> <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/NULL.html" class="external-link">is.null</a></span><span class="op">(</span><span class="va">state</span><span class="op">$</span><span class="va">log</span><span class="op">)</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="fl">0</span><span class="op">)</span> <span class="kw">else</span> <span class="va">state</span><span class="op">$</span><span class="va">log</span></span>

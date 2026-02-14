@@ -61,9 +61,9 @@ Added <code><a href="../reference/build_custom_agent.html">build_custom_agent()<
 <li><p><strong>Exported State-Graph Primitives</strong><br>
 Exported <code><a href="../reference/state_graph_utils.html">StateGraph()</a></code>, <code><a href="../reference/state_graph_utils.html">make_node()</a></code>, <code><a href="../reference/state_graph_utils.html">make_edge()</a></code>, <code><a href="../reference/state_graph_utils.html">make_command()</a></code>, and <code><a href="../reference/state_graph_utils.html">interrupt()</a></code> to support custom workflow construction.</p></li>
 <li><p><strong>LangGraph-Style Mermaid Export</strong><br>
-Added <code><a href="../reference/as_mermaid.html">compile_graph()</a></code> and <code><a href="../reference/as_mermaid.html">as_mermaid()</a></code> for Mermaid visualization, including optional subgraph grouping and graph direction control.</p></li>
+Added <code><a href="../reference/compile_graph.html">compile_graph()</a></code> and <code><a href="../reference/as_mermaid.html">as_mermaid()</a></code> for Mermaid visualization, including optional subgraph grouping and graph direction control.</p></li>
 <li><p><strong>PNG Graph Export Utility</strong><br>
-Added <code><a href="../reference/as_mermaid.html">save_mermaid_png()</a></code> to render Mermaid graph text (or compiled graph objects) into PNG files via Mermaid CLI (<code>mmdc</code>).</p></li>
+Added <code><a href="../reference/save_mermaid_png.html">save_mermaid_png()</a></code> to render Mermaid graph text (or compiled graph objects) into PNG files via Mermaid CLI (<code>mmdc</code>).</p></li>
 <li><p><strong>Reusable Code Agent with Builder Pattern</strong><br>
 The <code><a href="../reference/build_code_agent.html">build_code_agent()</a></code> function now supports a builder pattern. If <code>user_input</code> is omitted, the function returns a reusable agent (closure) that can handle multiple queries interactively. This allows for flexible integration in iterative coding workflows, similar to the existing <code><a href="../reference/build_researcher_agent.html">build_researcher_agent()</a></code>.</p></li>
 <li><p><strong>Reusable Interpreter Agent</strong><br>

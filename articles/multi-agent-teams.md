@@ -64,7 +64,7 @@ str(result)
 ## Workers As Custom Agents
 
 Workers can also be compiled custom-agent objects (for example from
-[`compile_graph()`](https://knowusuboaky.github.io/LLMAgentR/reference/as_mermaid.md)
+[`compile_graph()`](https://knowusuboaky.github.io/LLMAgentR/reference/compile_graph.md)
 or `build_custom_agent(..., output = "both")`).
 
 ``` r

@@ -8,10 +8,12 @@
   : Build a Custom Graph-Based Agent
 - [`build_custom_multi_agent()`](https://knowusuboaky.github.io/LLMAgentR/reference/build_custom_multi_agent.md)
   : Build a Custom Multi-Agent Team (Supervisor Style)
+- [`compile_graph()`](https://knowusuboaky.github.io/LLMAgentR/reference/compile_graph.md)
+  : Compile a Custom Agent Graph (LangGraph-Style Output)
 - [`as_mermaid()`](https://knowusuboaky.github.io/LLMAgentR/reference/as_mermaid.md)
-  [`save_mermaid_png()`](https://knowusuboaky.github.io/LLMAgentR/reference/as_mermaid.md)
-  [`compile_graph()`](https://knowusuboaky.github.io/LLMAgentR/reference/as_mermaid.md)
-  : Mermaid and Graph Compilation Helpers
+  : Convert a Custom Graph Spec to Mermaid
+- [`save_mermaid_png()`](https://knowusuboaky.github.io/LLMAgentR/reference/save_mermaid_png.md)
+  : Save Mermaid Diagram as PNG
 - [`make_node()`](https://knowusuboaky.github.io/LLMAgentR/reference/state_graph_utils.md)
   [`make_edge()`](https://knowusuboaky.github.io/LLMAgentR/reference/state_graph_utils.md)
   [`make_command()`](https://knowusuboaky.github.io/LLMAgentR/reference/state_graph_utils.md)

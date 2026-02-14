@@ -121,7 +121,7 @@ returns a named list update, or
 <code>__end__</code>: special terminal node.</li>
 </ul>
 <p>You build this with <code><a href="../reference/build_custom_agent.html">build_custom_agent()</a></code> or
-<code><a href="../reference/as_mermaid.html">compile_graph()</a></code>.</p>
+<code><a href="../reference/compile_graph.html">compile_graph()</a></code>.</p>
 </div>
 <div class="section level2">
 <h2 id="first-agent-linear-workflow">First Agent: Linear Workflow<a class="anchor" aria-label="anchor" href="#first-agent-linear-workflow"></a>
@@ -216,7 +216,7 @@ a target node.</p>
 <div class="section level2">
 <h2 id="compile-mermaid-diagram">Compile + Mermaid Diagram<a class="anchor" aria-label="anchor" href="#compile-mermaid-diagram"></a>
 </h2>
-<p>Use <code><a href="../reference/as_mermaid.html">compile_graph()</a></code> when you want both:</p>
+<p>Use <code><a href="../reference/compile_graph.html">compile_graph()</a></code> when you want both:</p>
 <ul>
 <li>a runnable function (<code>$run</code>), and</li>
 <li>graph artifacts (<code>$graph</code>, <code>$mermaid</code>).</li>
@@ -224,7 +224,7 @@ a target node.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/knowusuboaky/LLMAgentR" class="external-link">LLMAgentR</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/as_mermaid.html">compile_graph</a></span><span class="op">(</span></span>
+<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile_graph.html">compile_graph</a></span><span class="op">(</span></span>
 <span>  node_functions <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    start <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">state</span><span class="op">)</span> <span class="fu"><a href="../reference/state_graph_utils.html">make_command</a></span><span class="op">(</span><span class="st">"classify"</span><span class="op">)</span>,</span>
 <span>    classify <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">state</span><span class="op">)</span> <span class="op">{</span></span>

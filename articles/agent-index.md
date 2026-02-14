@@ -8,7 +8,7 @@ diagram for each agent.
 ## Generate Mermaid PNGs
 
 Use each agent’s built-in graph output (`output = "both"`) and save with
-[`save_mermaid_png()`](https://knowusuboaky.github.io/LLMAgentR/reference/as_mermaid.md):
+[`save_mermaid_png()`](https://knowusuboaky.github.io/LLMAgentR/reference/save_mermaid_png.md):
 
 ``` r
 library(LLMAgentR)

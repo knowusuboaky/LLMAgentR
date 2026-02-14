@@ -12,7 +12,11 @@ build_doc_summarizer_agent(
   summary_template = NULL,
   chunk_size = 4000,
   overlap = 200,
-  verbose = TRUE
+  verbose = TRUE,
+  output = c("agent", "mermaid", "both"),
+  direction = c("TD", "LR"),
+  subgraphs = NULL,
+  style = TRUE
 )
 ```
 
@@ -38,6 +42,22 @@ build_doc_summarizer_agent(
 - verbose:
 
   Logical controlling progress messages (default: TRUE).
+
+- output:
+
+  Output type: "agent" (default), "mermaid" for diagram only, or "both".
+
+- direction:
+
+  Mermaid diagram direction: "TD" (top-down) or "LR" (left-right).
+
+- subgraphs:
+
+  Optional named list for grouping nodes in Mermaid diagram.
+
+- style:
+
+  Logical; apply default styling to Mermaid diagram (default: TRUE).
 
 ## Value
 

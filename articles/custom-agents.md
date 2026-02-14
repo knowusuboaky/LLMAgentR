@@ -32,7 +32,7 @@ A custom agent is a small state machine:
 You build this with
 [`build_custom_agent()`](https://knowusuboaky.github.io/LLMAgentR/reference/build_custom_agent.md)
 or
-[`compile_graph()`](https://knowusuboaky.github.io/LLMAgentR/reference/as_mermaid.md).
+[`compile_graph()`](https://knowusuboaky.github.io/LLMAgentR/reference/compile_graph.md).
 
 ## First Agent: Linear Workflow
 
@@ -123,7 +123,7 @@ router_agent(list(query = "summarize this report"))
 ## Compile + Mermaid Diagram
 
 Use
-[`compile_graph()`](https://knowusuboaky.github.io/LLMAgentR/reference/as_mermaid.md)
+[`compile_graph()`](https://knowusuboaky.github.io/LLMAgentR/reference/compile_graph.md)
 when you want both:
 
 - a runnable function (`$run`), and
