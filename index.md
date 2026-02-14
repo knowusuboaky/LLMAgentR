@@ -53,13 +53,13 @@ Sys.setenv(
 
 ------------------------------------------------------------------------
 
-## Ã°Å¸â€?Â? LLM Support (Minimal Wrapper)
+## LLM Support (Minimal Wrapper)
 
 The `chatLLM` package allows you to interact with large language models
-(LLMs) effortlesslyÃ¢â‚¬â€?either through direct calls or via reusable
+(LLMs) effortlessly - either through direct calls or via reusable
 minimal wrappers.
 
-### Ã°Å¸â€œÂ¦ Load the Package
+### Load the Package
 
 ``` r
 library(chatLLM)
@@ -67,7 +67,7 @@ library(chatLLM)
 
 ------------------------------------------------------------------------
 
-### Ã°Å¸Â§Â© Minimal Wrapper Function
+### Minimal Wrapper Function
 
 Create a lightweight wrapper around `call_llm()` for reuse. It
 optionally provides verbose output:
@@ -121,7 +121,7 @@ my_llm_wrapper <- function(prompt, verbose = FALSE) {
 
 ------------------------------------------------------------------------
 
-### Ã°Å¸â€?Â? Quick Access Shortcut
+### Quick Access Shortcut
 
 Alternatively, preconfigure an LLM call for one-liners:
 
@@ -136,12 +136,12 @@ my_llm_wrapper <- call_llm(
 
 ------------------------------------------------------------------------
 
-## Ã°Å¸â€œÂ¦ Related Package: [`chatLLM`](https://cran.r-project.org/package=chatLLM)
+## Related Package: [`chatLLM`](https://cran.r-project.org/package=chatLLM)
 
 The [`chatLLM`](https://github.com/knowusuboaky/chatLLM) package (now
-available on CRAN Ã°Å¸Å½â€°) offers a modular interface for interacting
-with LLM providers including **OpenAI**, **Groq**, **Anthropic**,
-**DeepSeek**, **DashScope**, and **GitHub Models**.
+available on CRAN) offers a modular interface for interacting with LLM
+providers including **OpenAI**, **Groq**, **Anthropic**, **DeepSeek**,
+**DashScope**, and **GitHub Models**.
 
 ``` r
 install.packages("chatLLM")
@@ -190,5 +190,5 @@ A full index page is also available:
 
 ## License
 
-MIT Ã‚Â© [Kwadwo Daddy Nyame Owusu
+MIT (c) [Kwadwo Daddy Nyame Owusu
 Boakye](mailto:kwadwo.owusuboakye@outlook.com)
