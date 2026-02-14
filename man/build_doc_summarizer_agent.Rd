@@ -9,7 +9,11 @@ build_doc_summarizer_agent(
   summary_template = NULL,
   chunk_size = 4000,
   overlap = 200,
-  verbose = TRUE
+  verbose = TRUE,
+  output = c("agent", "mermaid", "both"),
+  direction = c("TD", "LR"),
+  subgraphs = NULL,
+  style = TRUE
 )
 }
 \arguments{
@@ -22,6 +26,14 @@ build_doc_summarizer_agent(
 \item{overlap}{Character overlap between chunks (default: 200).}
 
 \item{verbose}{Logical controlling progress messages (default: TRUE).}
+
+\item{output}{Output type: "agent" (default), "mermaid" for diagram only, or "both".}
+
+\item{direction}{Mermaid diagram direction: "TD" (top-down) or "LR" (left-right).}
+
+\item{subgraphs}{Optional named list for grouping nodes in Mermaid diagram.}
+
+\item{style}{Logical; apply default styling to Mermaid diagram (default: TRUE).}
 }
 \value{
 A function that accepts file paths or text input and returns:

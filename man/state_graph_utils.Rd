@@ -20,9 +20,9 @@ interrupt(value)
 StateGraph()
 }
 \arguments{
-\item{func}{A function that accepts a \code{state} list and returns either:
+\item{func}{A function that accepts a `state` list and returns either:
 1) a named list of state updates, or
-2) a command list created by \code{\link[=make_command]{make_command()}}.}
+2) a command list created by [make_command()].}
 
 \item{name}{Optional node name label.}
 
@@ -30,10 +30,10 @@ StateGraph()
 
 \item{to}{Destination node name.}
 
-\item{condition}{Optional function \code{function(state)} that returns a label used
+\item{condition}{Optional function `function(state)` that returns a label used
 for conditional routing.}
 
-\item{label}{Optional label matched against the value returned by \code{condition}.}
+\item{label}{Optional label matched against the value returned by `condition`.}
 
 \item{goto}{Next node name to jump to.}
 
@@ -42,23 +42,21 @@ for conditional routing.}
 \item{value}{Prompt text shown to the user.}
 }
 \value{
-\code{make_node()} returns a list with \code{func} and \code{name}.
+A list with `func` and `name`.
 
-\code{make_edge()} returns a list with \code{from}, \code{to}, \code{condition}, and \code{label}.
+A list with `from`, `to`, `condition`, and `label`.
 
-\code{make_command()} returns a command-like list with \code{goto} and \code{update}.
+A command-like list with `goto` and `update`.
 
-\code{interrupt()} returns a character string from \code{readline()}.
+A character string from `readline()`.
 
-\code{StateGraph()} returns a list with methods:
-\itemize{
-\item \code{add_node(name, func)}
-\item \code{add_edge(from, to)}
-\item \code{add_conditional_edges(node_name, condition_fun, mapping_list)}
-\item \code{set_entry_point(node_name)}
-\item \code{compile(checkpointer = NULL)}
-\item \code{END_NODE_NAME}
-}
+A list with methods:
+  - `add_node(name, func)`
+  - `add_edge(from, to)`
+  - `add_conditional_edges(node_name, condition_fun, mapping_list)`
+  - `set_entry_point(node_name)`
+  - `compile(checkpointer = NULL)`
+  - `END_NODE_NAME`
 }
 \description{
 Lightweight graph primitives used by LLMAgentR's workflow agents.

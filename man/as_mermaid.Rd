@@ -2,9 +2,7 @@
 % Please edit documentation in R/zz_custom_agent.R
 \name{as_mermaid}
 \alias{as_mermaid}
-\alias{save_mermaid_png}
-\alias{compile_graph}
-\title{Mermaid and Graph Compilation Helpers}
+\title{Convert a Custom Graph Spec to Mermaid}
 \usage{
 as_mermaid(
   x,
@@ -13,100 +11,23 @@ as_mermaid(
   include_start_end = TRUE,
   style = TRUE
 )
-
-save_mermaid_png(
-  x,
-  file,
-  mmdc = Sys.which("mmdc"),
-  direction = c("TD", "LR"),
-  subgraphs = NULL,
-  include_start_end = TRUE,
-  style = TRUE,
-  width = NULL,
-  height = NULL,
-  scale = NULL,
-  background = "white",
-  theme = "default",
-  quiet = TRUE
-)
-
-compile_graph(
-  node_functions,
-  entry_point,
-  edges = list(),
-  conditional_edges = list(),
-  default_state = list(),
-  checkpointer = NULL,
-  direction = c("TD", "LR"),
-  subgraphs = NULL,
-  style = TRUE
-)
 }
 \arguments{
-\item{x}{Graph spec list (from \code{build_custom_agent(..., output = "both")$graph})
-or a compiled object returned by \code{build_custom_agent(..., output = "both")}
-or \code{compile_graph()}.}
+\item{x}{Graph spec list (from `build_custom_agent(..., output = "both")$graph`)
+or a compiled object returned by `build_custom_agent(..., output = "both")`
+or [compile_graph()].}
 
-\item{direction}{Mermaid direction: \code{"TD"} (top-down) or \code{"LR"} (left-right).}
+\item{direction}{Mermaid direction: `"TD"` (top-down) or `"LR"` (left-right).}
 
 \item{subgraphs}{Optional named list of subgraph groupings.}
 
-\item{include_start_end}{Logical; include \code{__start__} and \code{__end__} nodes.}
+\item{include_start_end}{Logical; include `__start__` and `__end__` nodes.}
 
 \item{style}{Logical; include default LangGraph-like Mermaid styling.}
-
-\item{file}{Output \code{.png} path.}
-
-\item{mmdc}{Path to Mermaid CLI executable. Defaults to \code{Sys.which("mmdc")}.}
-
-\item{width}{Optional diagram width passed to \code{mmdc}.}
-
-\item{height}{Optional diagram height passed to \code{mmdc}.}
-
-\item{scale}{Optional diagram scale passed to \code{mmdc}.}
-
-\item{background}{Background color for Mermaid rendering.}
-
-\item{theme}{Mermaid theme (for example \code{"default"}, \code{"neutral"}, \code{"dark"}).}
-
-\item{quiet}{Logical; suppress Mermaid CLI output when \code{TRUE}.}
-
-\item{node_functions}{Named list of node functions. Each function takes \code{state}
-and returns a named list or \code{\link[=make_command]{make_command()}}.}
-
-\item{entry_point}{Name of the start node (must exist in \code{node_functions}).}
-
-\item{edges}{Optional list of static edges. Each item can be:
-\itemize{
-\item a character vector of length 2: \code{c("from", "to")}, or
-\item a list with \code{from} and \code{to}.
-}}
-
-\item{conditional_edges}{Optional list where each item contains:
-\itemize{
-\item \code{from} (or \code{node_name}),
-\item \code{condition} (or \code{condition_fun}),
-\item \code{mapping} (or \code{mapping_list}) as a named list of label -> node.
-}}
-
-\item{default_state}{Optional named list merged into \code{state} for missing keys.}
-
-\item{checkpointer}{Optional callback \code{function(state, current_node)} executed
-after each transition.}
 }
 \value{
-\code{as_mermaid()} returns Mermaid flowchart text.
-
-\code{save_mermaid_png()} invisibly returns the output file path.
-
-\code{compile_graph()} returns a list with \code{run}, \code{graph}, and \code{mermaid}.
+Mermaid flowchart text.
 }
 \description{
-\code{as_mermaid()} converts a compiled graph spec into Mermaid syntax.
-
-\code{save_mermaid_png()} renders Mermaid text or compiled graph objects to
-PNG using Mermaid CLI (\code{mmdc}).
-
-\code{compile_graph()} is a convenience wrapper around
-\code{build_custom_agent(..., output = "both")} for LangGraph-style compile output.
+Convert a Custom Graph Spec to Mermaid
 }

@@ -37,6 +37,10 @@ get_suggested <- function(pkg, fun = NULL) {
 #' @param chunk_size Maximum character length for document chunks (default: 4000).
 #' @param overlap Character overlap between chunks (default: 200).
 #' @param verbose Logical controlling progress messages (default: TRUE).
+#' @param output Output type: "agent" (default), "mermaid" for diagram only, or "both".
+#' @param direction Mermaid diagram direction: "TD" (top-down) or "LR" (left-right).
+#' @param subgraphs Optional named list for grouping nodes in Mermaid diagram.
+#' @param style Logical; apply default styling to Mermaid diagram (default: TRUE).
 #'
 #' @return A function that accepts file paths or text input and returns:
 #' \itemize{

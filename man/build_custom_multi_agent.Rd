@@ -20,19 +20,15 @@ build_custom_multi_agent(
 )
 }
 \arguments{
-\item{supervisor}{Function that accepts \code{state} and returns:
-\itemize{
-\item worker name (character scalar), or
-\item list with \code{next}, optionally additional updates.
-}}
+\item{supervisor}{Function that accepts `state` and returns:
+- worker name (character scalar), or
+- list with `next`, optionally additional updates.}
 
 \item{workers}{Named list of workers. Each worker can be:
-\itemize{
-\item a function that accepts \code{state} and returns a named list of updates, or
-\item a compiled custom-agent object with a callable \code{$run} function (for
-example from \code{\link[=build_custom_agent]{build_custom_agent()}} with \code{output = "both"} or
-\code{\link[=compile_graph]{compile_graph()}}).
-}}
+- a function that accepts `state` and returns a named list of updates, or
+- a compiled custom-agent object with a callable `$run` function (for
+  example from [build_custom_agent()] with `output = "both"` or
+  [compile_graph()]).}
 
 \item{finish_token}{Character label used by the supervisor to terminate.}
 
@@ -40,37 +36,33 @@ example from \code{\link[=build_custom_agent]{build_custom_agent()}} with \code{
 
 \item{allow_repeat}{Logical; allow the same worker twice in a row.}
 
-\item{worker_error_policy}{\code{"return_to_supervisor"} (default) or \code{"stop"}.}
+\item{worker_error_policy}{`"return_to_supervisor"` (default) or `"stop"`.}
 
-\item{default_state}{Optional defaults merged into incoming \code{state}.}
+\item{default_state}{Optional defaults merged into incoming `state`.}
 
-\item{checkpointer}{Optional callback \code{function(state, current_node)}.}
+\item{checkpointer}{Optional callback `function(state, current_node)`.}
 
 \item{output}{Output mode:
-\itemize{
-\item \code{"agent"} (default): return runnable agent,
-\item \code{"mermaid"}: return Mermaid text,
-\item \code{"both"}: return list with \code{run}, \code{graph}, and \code{mermaid}.
-}}
+- `"agent"` (default): return runnable agent,
+- `"mermaid"`: return Mermaid text,
+- `"both"`: return list with `run`, `graph`, and `mermaid`.}
 
-\item{direction}{Mermaid direction when \code{output} includes Mermaid.}
+\item{direction}{Mermaid direction when `output` includes Mermaid.}
 
-\item{subgraphs}{Optional Mermaid subgraph groups. If \code{NULL}, defaults to
-\code{list(Supervisor = "supervisor", Workers = names(workers))}.}
+\item{subgraphs}{Optional Mermaid subgraph groups. If `NULL`, defaults to
+`list(Supervisor = "supervisor", Workers = names(workers))`.}
 
 \item{style}{Logical; include default Mermaid class styling.}
 }
 \value{
-\itemize{
-\item If \code{output = "agent"}: runnable \code{function(state)}.
-\item If \code{output = "mermaid"}: Mermaid text.
-\item If \code{output = "both"}: list with \code{run}, \code{graph}, and \code{mermaid}.
-}
+- If `output = "agent"`: runnable function(state).
+- If `output = "mermaid"`: Mermaid text.
+- If `output = "both"`: list with `run`, `graph`, and `mermaid`.
 }
 \description{
 Build a supervisor-routed multi-agent workflow, similar to LangGraph team
-orchestration. The supervisor chooses the next worker by setting \code{state$next}
-to one of the worker names or \code{FINISH}.
+orchestration. The supervisor chooses the next worker by setting `state$next`
+to one of the worker names or `FINISH`.
 }
 \examples{
 \dontrun{
@@ -96,4 +88,5 @@ team <- build_custom_multi_agent(
 cat(team$mermaid)
 team$run(list())
 }
+
 }

@@ -18,48 +18,40 @@ build_custom_agent(
 )
 }
 \arguments{
-\item{node_functions}{Named list of node functions. Each function takes \code{state}
-and returns a named list or \code{\link[=make_command]{make_command()}}.}
+\item{node_functions}{Named list of node functions. Each function takes `state`
+and returns a named list or [make_command()].}
 
-\item{entry_point}{Name of the start node (must exist in \code{node_functions}).}
+\item{entry_point}{Name of the start node (must exist in `node_functions`).}
 
 \item{edges}{Optional list of static edges. Each item can be:
-\itemize{
-\item a character vector of length 2: \code{c("from", "to")}, or
-\item a list with \code{from} and \code{to}.
-}}
+- a character vector of length 2: `c("from", "to")`, or
+- a list with `from` and `to`.}
 
 \item{conditional_edges}{Optional list where each item contains:
-\itemize{
-\item \code{from} (or \code{node_name}),
-\item \code{condition} (or \code{condition_fun}),
-\item \code{mapping} (or \code{mapping_list}) as a named list of label -> node.
-}}
+- `from` (or `node_name`),
+- `condition` (or `condition_fun`),
+- `mapping` (or `mapping_list`) as a named list of label -> node.}
 
-\item{default_state}{Optional named list merged into \code{state} for missing keys.}
+\item{default_state}{Optional named list merged into `state` for missing keys.}
 
-\item{checkpointer}{Optional callback \code{function(state, current_node)} executed
+\item{checkpointer}{Optional callback `function(state, current_node)` executed
 after each transition.}
 
 \item{output}{Output mode:
-\itemize{
-\item \code{"agent"} (default): return runnable agent function,
-\item \code{"mermaid"}: return Mermaid text only,
-\item \code{"both"}: return list with \code{run}, \code{graph}, and \code{mermaid}.
-}}
+- `"agent"` (default): return runnable agent function,
+- `"mermaid"`: return Mermaid text only,
+- `"both"`: return list with `run`, `graph`, and `mermaid`.}
 
-\item{direction}{Mermaid direction used when \code{output} includes Mermaid.}
+\item{direction}{Mermaid direction used when `output` includes Mermaid.}
 
 \item{subgraphs}{Optional named list of subgraph groups for Mermaid rendering.}
 
 \item{style}{Logical; include default Mermaid class styling.}
 }
 \value{
-\itemize{
-\item If \code{output = "agent"}: a function that accepts \code{state} and returns final state.
-\item If \code{output = "mermaid"}: Mermaid flowchart text.
-\item If \code{output = "both"}: list with \code{run}, \code{graph}, and \code{mermaid}.
-}
+- If `output = "agent"`: a function that accepts `state` and returns final state.
+- If `output = "mermaid"`: Mermaid flowchart text.
+- If `output = "both"`: list with `run`, `graph`, and `mermaid`.
 }
 \description{
 Build a reusable agent by wiring user-defined node functions into a state graph.
@@ -92,4 +84,5 @@ custom <- build_custom_agent(
 cat(custom$mermaid)
 custom$run(list(query = "weather in Accra"))
 }
+
 }
