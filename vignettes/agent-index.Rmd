@@ -1,0 +1,33 @@
+---
+title: "Agent Index"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Agent Index}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+## Overview
+
+This index links to one article per agent so you can learn each workflow
+separately.
+
+## Core Agents
+
+- [Code Generation Agent](code-agent.html)
+- [SQL Query Agent](sql-agent.html)
+- [Research Agent](research-agent.html)
+- [Interpreter Agent](interpreter-agent.html)
+- [Document Summarizer Agent](document-summarizer-agent.html)
+- [Data Cleaning Agent](data-cleaning-agent.html)
+- [Forecasting Agent](forecasting-agent.html)
+- [Data Wrangling Agent](data-wrangling-agent.html)
+- [Weather Agent](weather-agent.html)
+- [Feature Engineering Agent](feature-engineering-agent.html)
+- [Visualization Agent](visualization-agent.html)
+
+## Custom Graph Workflows
+
+- [Building Custom Agents](custom-agents.html)
+- [Building Multi-Agent Teams](multi-agent-teams.html)
+

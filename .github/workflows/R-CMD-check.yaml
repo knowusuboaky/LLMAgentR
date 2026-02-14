@@ -1,0 +1,43 @@
+name: Build & Test Package
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: llmagentr-r-cmd-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  R-CMD-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      NOT_CRAN: true
+      _R_CHECK_CRAN_INCOMING_: false
+      _R_CHECK_CRAN_INCOMING_REMOTE_: false
+      _R_CHECK_FORCE_SUGGESTS_: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: release
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::rcmdcheck
+          needs: check
+
+      - uses: r-lib/actions/check-r-package@v2
+        with:
+          args: 'c("--no-manual", "--no-build-vignettes", "--as-cran")'
+          upload-snapshots: true
