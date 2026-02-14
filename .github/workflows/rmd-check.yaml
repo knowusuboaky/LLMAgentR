@@ -18,6 +18,9 @@ jobs:
   rmd-check:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      LANG: C.UTF-8
+      LC_ALL: C.UTF-8
 
     steps:
       - uses: actions/checkout@v4
