@@ -14,6 +14,8 @@ Downloads](https://cranlogs.r-pkg.org/badges/grand-total/LLMAgentR?color=orange)
 [![Last
 Commit](https://img.shields.io/github/last-commit/knowusuboaky/LLMAgentR.svg)](https://github.com/knowusuboaky/LLMAgentR/commits/main)
 [![Issues](https://img.shields.io/github/issues/knowusuboaky/LLMAgentR.svg)](https://github.com/knowusuboaky/LLMAgentR/issues)
+[![Rmd
+Check](https://github.com/knowusuboaky/LLMAgentR/actions/workflows/rmd-check.yaml/badge.svg)](https://github.com/knowusuboaky/LLMAgentR/actions/workflows/rmd-check.yaml)
 <!-- badges: end -->
 
 ## Overview
@@ -1081,6 +1083,47 @@ Saves the interactive plot as a standalone HTML file: "monthly_charges_vs_churn.
 ">
 </iframe>
 <!--/html_preserve-->
+
+### 12. Custom Agent Builder (New)
+
+You can now build your own graph-based agent directly with
+`build_custom_agent()` or use `compile_graph()` to get both runnable code
+and a Mermaid diagram (LangGraph-style).
+
+``` r
+library(LLMAgentR)
+
+compiled <- compile_graph(
+  node_functions = list(
+    start = function(state) make_command("route"),
+    route = function(state) {
+      if (grepl("weather", state$query, ignore.case = TRUE)) {
+        make_command("weather_handler")
+      } else {
+        make_command("general_handler")
+      }
+    },
+    weather_handler = function(state) list(answer = "Use weather flow"),
+    general_handler = function(state) list(answer = "Use general flow")
+  ),
+  entry_point = "start",
+  edges = list(
+    c("weather_handler", "__end__"),
+    c("general_handler", "__end__")
+  ),
+  default_state = list(retry_count = 0, max_retries = 3),
+  subgraphs = list(
+    Router = c("start", "route"),
+    Handlers = c("weather_handler", "general_handler")
+  )
+)
+
+cat(compiled$mermaid)
+compiled$run(list(query = "weather in Accra"))
+
+# Optional: save Mermaid as PNG (requires Mermaid CLI: mmdc)
+# save_mermaid_png(compiled, file = "router_graph.png")
+```
 
 ## License
 

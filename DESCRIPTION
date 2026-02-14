@@ -1,7 +1,7 @@
 Package: LLMAgentR
 Type: Package
 Title: Language Model Agents in R for AI Workflows and Research
-Version: 0.3.0
+Version: 0.3.1
 Authors@R: person(given = "Kwadwo Daddy Nyame",
                   family = "Owusu Boakye",
                   email = "kwadwo.owusuboakye@outlook.com",
@@ -42,6 +42,8 @@ Imports:
 Suggests:
     testthat (>= 3.0.0),
     roxygen2,
+    knitr,
+    rmarkdown,
     jsonlite,
     magrittr,
     rlang,
@@ -62,4 +64,5 @@ Suggests:
     rvest,
     fastDummies,
     stringr
+VignetteBuilder: knitr
 
