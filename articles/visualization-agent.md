@@ -6,6 +6,10 @@
 generates visualization code and explanations from data and user chart
 instructions.
 
+## Workflow Diagram
+
+![](../visualization-agent-workflow.png)
+
 ## Step 1: Build the Agent
 
 ``` r

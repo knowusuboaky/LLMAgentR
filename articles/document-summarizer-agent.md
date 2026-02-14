@@ -6,6 +6,10 @@
 summarizes documents (PDF, DOCX, PPTX, TXT, or plain text) into
 structured output.
 
+## Workflow Diagram
+
+![](../document-summarizer-agent-workflow.png)
+
 ## Step 1: Build the Summarizer
 
 ``` r

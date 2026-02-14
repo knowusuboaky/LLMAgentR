@@ -6,6 +6,10 @@
 turns technical outputs (tables, metrics, model summaries) into
 plain-language interpretation.
 
+## Workflow Diagram
+
+![](../interpreter-agent-workflow.png)
+
 ## Step 1: Build a Reusable Interpreter
 
 ``` r

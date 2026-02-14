@@ -6,6 +6,10 @@
 creates a forecasting workflow with model recommendation, code
 generation, retries, execution, and explanation.
 
+## Workflow Diagram
+
+![](../forecasting-agent-workflow.png)
+
 ## Step 1: Prepare Example Data
 
 ``` r

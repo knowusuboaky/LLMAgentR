@@ -5,6 +5,10 @@
 [`build_code_agent()`](https://knowusuboaky.github.io/LLMAgentR/reference/build_code_agent.md)
 helps you generate or debug R code from natural-language instructions.
 
+## Workflow Diagram
+
+![](../code-agent-workflow.png)
+
 ## Step 1: Create an LLM Wrapper
 
 ``` r

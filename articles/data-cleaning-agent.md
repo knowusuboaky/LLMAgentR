@@ -6,6 +6,10 @@
 recommends and applies cleaning steps, runs code, and can explain what
 was done.
 
+## Workflow Diagram
+
+![](../data-cleaning-agent-workflow.png)
+
 ## Step 1: Build the Agent
 
 ``` r

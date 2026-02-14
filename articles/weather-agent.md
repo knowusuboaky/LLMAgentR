@@ -6,6 +6,10 @@
 fetches weather data from OpenWeatherMap and asks an LLM to produce a
 user-friendly report.
 
+## Workflow Diagram
+
+![](../weather-agent-workflow.png)
+
 ## Step 1: Configure API Key
 
 ``` r

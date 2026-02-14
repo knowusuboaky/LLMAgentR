@@ -6,6 +6,10 @@
 helps with joins, reshaping, transformations, and repeatable wrangling
 functions.
 
+## Workflow Diagram
+
+![](../data-wrangling-agent-workflow.png)
+
 ## Step 1: Build the Agent
 
 ``` r

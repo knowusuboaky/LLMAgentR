@@ -5,6 +5,10 @@
 [`build_researcher_agent()`](https://knowusuboaky.github.io/LLMAgentR/reference/build_researcher_agent.md)
 performs web search and asks an LLM to produce a research-style answer.
 
+## Workflow Diagram
+
+![](../research-agent-workflow.png)
+
 ## Step 1: Build the Agent
 
 ``` r

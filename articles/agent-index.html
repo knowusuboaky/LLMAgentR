@@ -84,27 +84,131 @@
 <div class="section level2">
 <h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
 </h2>
-<p>This index links to one article per agent so you can learn each
-workflow separately.</p>
+<p>This index links to one article per agent and also shows the workflow
+diagram for each agent.</p>
+</div>
+<div class="section level2">
+<h2 id="generate-mermaid-pngs">Generate Mermaid PNGs<a class="anchor" aria-label="anchor" href="#generate-mermaid-pngs"></a>
+</h2>
+<p>Use the built-in generator script (<code><a href="../reference/as_mermaid.html">compile_graph()</a></code> +
+<code><a href="../reference/as_mermaid.html">save_mermaid_png()</a></code>):</p>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># From the LLMAgentR project root</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/source.html" class="external-link">source</a></span><span class="op">(</span><span class="st">"pkgdown/generate-agent-workflow-pngs.R"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Generate all workflow PNGs</span></span>
+<span><span class="fu">generate_all_agent_workflow_pngs</span><span class="op">(</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Or generate only one workflow PNG</span></span>
+<span><span class="fu">generate_agent_workflow_png</span><span class="op">(</span><span class="st">"code-agent"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="core-agents">Core Agents<a class="anchor" aria-label="anchor" href="#core-agents"></a>
 </h2>
-<ul>
-<li><a href="code-agent.html">Code Generation Agent</a></li>
-<li><a href="sql-agent.html">SQL Query Agent</a></li>
-<li><a href="research-agent.html">Research Agent</a></li>
-<li><a href="interpreter-agent.html">Interpreter Agent</a></li>
-<li><a href="document-summarizer-agent.html">Document Summarizer
-Agent</a></li>
-<li><a href="data-cleaning-agent.html">Data Cleaning Agent</a></li>
-<li><a href="forecasting-agent.html">Forecasting Agent</a></li>
-<li><a href="data-wrangling-agent.html">Data Wrangling Agent</a></li>
-<li><a href="weather-agent.html">Weather Agent</a></li>
-<li><a href="feature-engineering-agent.html">Feature Engineering
-Agent</a></li>
-<li><a href="visualization-agent.html">Visualization Agent</a></li>
-</ul>
+<div class="section level3">
+<h3 id="code-generation-agent">Code Generation Agent<a class="anchor" aria-label="anchor" href="#code-generation-agent"></a>
+</h3>
+<p>Article: <a href="code-agent.html">Code Generation Agent</a></p>
+<p><img src="../code-agent-workflow.png"></p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/source.html" class="external-link">source</a></span><span class="op">(</span><span class="st">"pkgdown/generate-agent-workflow-pngs.R"</span><span class="op">)</span></span>
+<span><span class="fu">generate_agent_workflow_png</span><span class="op">(</span><span class="st">"code-agent"</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="sql-query-agent">SQL Query Agent<a class="anchor" aria-label="anchor" href="#sql-query-agent"></a>
+</h3>
+<p>Article: <a href="sql-agent.html">SQL Query Agent</a></p>
+<p><img src="../sql-agent-workflow.png"></p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/source.html" class="external-link">source</a></span><span class="op">(</span><span class="st">"pkgdown/generate-agent-workflow-pngs.R"</span><span class="op">)</span></span>
+<span><span class="fu">generate_agent_workflow_png</span><span class="op">(</span><span class="st">"sql-agent"</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="research-agent">Research Agent<a class="anchor" aria-label="anchor" href="#research-agent"></a>
+</h3>
+<p>Article: <a href="research-agent.html">Research Agent</a></p>
+<p><img src="../research-agent-workflow.png"></p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/source.html" class="external-link">source</a></span><span class="op">(</span><span class="st">"pkgdown/generate-agent-workflow-pngs.R"</span><span class="op">)</span></span>
+<span><span class="fu">generate_agent_workflow_png</span><span class="op">(</span><span class="st">"research-agent"</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="interpreter-agent">Interpreter Agent<a class="anchor" aria-label="anchor" href="#interpreter-agent"></a>
+</h3>
+<p>Article: <a href="interpreter-agent.html">Interpreter Agent</a></p>
+<p><img src="../interpreter-agent-workflow.png"></p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/source.html" class="external-link">source</a></span><span class="op">(</span><span class="st">"pkgdown/generate-agent-workflow-pngs.R"</span><span class="op">)</span></span>
+<span><span class="fu">generate_agent_workflow_png</span><span class="op">(</span><span class="st">"interpreter-agent"</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="document-summarizer-agent">Document Summarizer Agent<a class="anchor" aria-label="anchor" href="#document-summarizer-agent"></a>
+</h3>
+<p>Article: <a href="document-summarizer-agent.html">Document Summarizer
+Agent</a></p>
+<p><img src="../document-summarizer-agent-workflow.png"></p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/source.html" class="external-link">source</a></span><span class="op">(</span><span class="st">"pkgdown/generate-agent-workflow-pngs.R"</span><span class="op">)</span></span>
+<span><span class="fu">generate_agent_workflow_png</span><span class="op">(</span><span class="st">"document-summarizer-agent"</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="data-cleaning-agent">Data Cleaning Agent<a class="anchor" aria-label="anchor" href="#data-cleaning-agent"></a>
+</h3>
+<p>Article: <a href="data-cleaning-agent.html">Data Cleaning
+Agent</a></p>
+<p><img src="../data-cleaning-agent-workflow.png"></p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/source.html" class="external-link">source</a></span><span class="op">(</span><span class="st">"pkgdown/generate-agent-workflow-pngs.R"</span><span class="op">)</span></span>
+<span><span class="fu">generate_agent_workflow_png</span><span class="op">(</span><span class="st">"data-cleaning-agent"</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="forecasting-agent">Forecasting Agent<a class="anchor" aria-label="anchor" href="#forecasting-agent"></a>
+</h3>
+<p>Article: <a href="forecasting-agent.html">Forecasting Agent</a></p>
+<p><img src="../forecasting-agent-workflow.png"></p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/source.html" class="external-link">source</a></span><span class="op">(</span><span class="st">"pkgdown/generate-agent-workflow-pngs.R"</span><span class="op">)</span></span>
+<span><span class="fu">generate_agent_workflow_png</span><span class="op">(</span><span class="st">"forecasting-agent"</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="data-wrangling-agent">Data Wrangling Agent<a class="anchor" aria-label="anchor" href="#data-wrangling-agent"></a>
+</h3>
+<p>Article: <a href="data-wrangling-agent.html">Data Wrangling
+Agent</a></p>
+<p><img src="../data-wrangling-agent-workflow.png"></p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/source.html" class="external-link">source</a></span><span class="op">(</span><span class="st">"pkgdown/generate-agent-workflow-pngs.R"</span><span class="op">)</span></span>
+<span><span class="fu">generate_agent_workflow_png</span><span class="op">(</span><span class="st">"data-wrangling-agent"</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="weather-agent">Weather Agent<a class="anchor" aria-label="anchor" href="#weather-agent"></a>
+</h3>
+<p>Article: <a href="weather-agent.html">Weather Agent</a></p>
+<p><img src="../weather-agent-workflow.png"></p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/source.html" class="external-link">source</a></span><span class="op">(</span><span class="st">"pkgdown/generate-agent-workflow-pngs.R"</span><span class="op">)</span></span>
+<span><span class="fu">generate_agent_workflow_png</span><span class="op">(</span><span class="st">"weather-agent"</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="feature-engineering-agent">Feature Engineering Agent<a class="anchor" aria-label="anchor" href="#feature-engineering-agent"></a>
+</h3>
+<p>Article: <a href="feature-engineering-agent.html">Feature Engineering
+Agent</a></p>
+<p><img src="../feature-engineering-agent-workflow.png"></p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/source.html" class="external-link">source</a></span><span class="op">(</span><span class="st">"pkgdown/generate-agent-workflow-pngs.R"</span><span class="op">)</span></span>
+<span><span class="fu">generate_agent_workflow_png</span><span class="op">(</span><span class="st">"feature-engineering-agent"</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="visualization-agent">Visualization Agent<a class="anchor" aria-label="anchor" href="#visualization-agent"></a>
+</h3>
+<p>Article: <a href="visualization-agent.html">Visualization
+Agent</a></p>
+<p><img src="../visualization-agent-workflow.png"></p>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/source.html" class="external-link">source</a></span><span class="op">(</span><span class="st">"pkgdown/generate-agent-workflow-pngs.R"</span><span class="op">)</span></span>
+<span><span class="fu">generate_agent_workflow_png</span><span class="op">(</span><span class="st">"visualization-agent"</span><span class="op">)</span></span></code></pre></div>
+</div>
 </div>
 <div class="section level2">
 <h2 id="custom-graph-workflows">Custom Graph Workflows<a class="anchor" aria-label="anchor" href="#custom-graph-workflows"></a>

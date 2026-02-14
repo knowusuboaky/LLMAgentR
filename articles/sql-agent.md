@@ -6,6 +6,10 @@
 generates SQL from user instructions, executes it, retries on errors,
 and can explain the final query.
 
+## Workflow Diagram
+
+![](../sql-agent-workflow.png)
+
 ## Step 1: Prepare a Database
 
 ``` r

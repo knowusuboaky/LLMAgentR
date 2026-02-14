@@ -6,6 +6,10 @@
 creates/derives features to improve model performance and explains the
 transformation logic.
 
+## Workflow Diagram
+
+![](../feature-engineering-agent-workflow.png)
+
 ## Step 1: Build the Agent
 
 ``` r
