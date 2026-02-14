@@ -9,6 +9,26 @@ performs web search and asks an LLM to produce a research-style answer.
 
 ![](../research-agent-workflow.png)
 
+## Generate Mermaid PNGs
+
+``` r
+library(LLMAgentR)
+
+my_llm_wrapper <- function(prompt, verbose = FALSE) "LLM response placeholder"
+
+workflow <- build_researcher_agent(
+  llm = my_llm_wrapper,
+  tavily_search = "your-tavily-key",
+  output = "both",
+  direction = "LR"
+)
+
+save_mermaid_png(
+  x = workflow,
+  file = "pkgdown/assets/research-agent-workflow.png"
+)
+```
+
 ## Step 1: Build the Agent
 
 ``` r

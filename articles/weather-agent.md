@@ -10,6 +10,27 @@ user-friendly report.
 
 ![](../weather-agent-workflow.png)
 
+## Generate Mermaid PNGs
+
+``` r
+library(LLMAgentR)
+
+my_llm_wrapper <- function(prompt, verbose = FALSE) "LLM response placeholder"
+
+workflow <- build_weather_agent(
+  llm = my_llm_wrapper,
+  location_query = "Accra, Ghana",
+  weather_api_key = "your-openweathermap-key",
+  output = "both",
+  direction = "LR"
+)
+
+save_mermaid_png(
+  x = workflow,
+  file = "pkgdown/assets/weather-agent-workflow.png"
+)
+```
+
 ## Step 1: Configure API Key
 
 ``` r

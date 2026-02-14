@@ -10,6 +10,25 @@ structured output.
 
 ![](../document-summarizer-agent-workflow.png)
 
+## Generate Mermaid PNGs
+
+``` r
+library(LLMAgentR)
+
+my_llm_wrapper <- function(prompt, verbose = FALSE) "LLM response placeholder"
+
+workflow <- build_doc_summarizer_agent(
+  llm = my_llm_wrapper,
+  output = "both",
+  direction = "LR"
+)
+
+save_mermaid_png(
+  x = workflow,
+  file = "pkgdown/assets/document-summarizer-agent-workflow.png"
+)
+```
+
 ## Step 1: Build the Summarizer
 
 ``` r

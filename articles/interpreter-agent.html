@@ -94,9 +94,28 @@ interpretation.</p>
 <p><img src="../interpreter-agent-workflow.png"></p>
 </div>
 <div class="section level2">
-<h2 id="step-1-build-a-reusable-interpreter">Step 1: Build a Reusable Interpreter<a class="anchor" aria-label="anchor" href="#step-1-build-a-reusable-interpreter"></a>
+<h2 id="generate-mermaid-pngs">Generate Mermaid PNGs<a class="anchor" aria-label="anchor" href="#generate-mermaid-pngs"></a>
 </h2>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/knowusuboaky/LLMAgentR" class="external-link">LLMAgentR</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">my_llm_wrapper</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">prompt</span>, <span class="va">verbose</span> <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> <span class="st">"LLM response placeholder"</span></span>
+<span></span>
+<span><span class="va">workflow</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/build_interpreter_agent.html">build_interpreter_agent</a></span><span class="op">(</span></span>
+<span>  llm <span class="op">=</span> <span class="va">my_llm_wrapper</span>,</span>
+<span>  output <span class="op">=</span> <span class="st">"both"</span>,</span>
+<span>  direction <span class="op">=</span> <span class="st">"LR"</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="../reference/as_mermaid.html">save_mermaid_png</a></span><span class="op">(</span></span>
+<span>  x <span class="op">=</span> <span class="va">workflow</span>,</span>
+<span>  file <span class="op">=</span> <span class="st">"pkgdown/assets/interpreter-agent-workflow.png"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="step-1-build-a-reusable-interpreter">Step 1: Build a Reusable Interpreter<a class="anchor" aria-label="anchor" href="#step-1-build-a-reusable-interpreter"></a>
+</h2>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/knowusuboaky/LLMAgentR" class="external-link">LLMAgentR</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">my_llm_wrapper</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">prompt</span>, <span class="va">verbose</span> <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> <span class="st">"LLM response placeholder"</span></span>
@@ -109,7 +128,7 @@ interpretation.</p>
 <div class="section level2">
 <h2 id="step-2-interpret-an-output">Step 2: Interpret an Output<a class="anchor" aria-label="anchor" href="#step-2-interpret-an-output"></a>
 </h2>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">table_txt</span> <span class="op">&lt;-</span> <span class="st">"</span></span>
 <span><span class="st">| Region | Sales | Profit |</span></span>
 <span><span class="st">| North  | 2000  | 300    |</span></span>

@@ -9,6 +9,25 @@ helps you generate or debug R code from natural-language instructions.
 
 ![](../code-agent-workflow.png)
 
+## Generate Mermaid PNGs
+
+``` r
+library(LLMAgentR)
+
+my_llm_wrapper <- function(prompt, verbose = FALSE) "LLM response placeholder"
+
+workflow <- build_code_agent(
+  llm = my_llm_wrapper,
+  output = "both",
+  direction = "LR"
+)
+
+save_mermaid_png(
+  x = workflow,
+  file = "pkgdown/assets/code-agent-workflow.png"
+)
+```
+
 ## Step 1: Create an LLM Wrapper
 
 ``` r

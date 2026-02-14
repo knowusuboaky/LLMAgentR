@@ -10,6 +10,25 @@ instructions.
 
 ![](../visualization-agent-workflow.png)
 
+## Generate Mermaid PNGs
+
+``` r
+library(LLMAgentR)
+
+my_llm_wrapper <- function(prompt, verbose = FALSE) "LLM response placeholder"
+
+workflow <- build_visualization_agent(
+  model = my_llm_wrapper,
+  output = "both",
+  direction = "LR"
+)
+
+save_mermaid_png(
+  x = workflow,
+  file = "pkgdown/assets/visualization-agent-workflow.png"
+)
+```
+
 ## Step 1: Build the Agent
 
 ``` r

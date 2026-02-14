@@ -10,6 +10,26 @@ and can explain the final query.
 
 ![](../sql-agent-workflow.png)
 
+## Generate Mermaid PNGs
+
+``` r
+library(LLMAgentR)
+
+my_llm_wrapper <- function(prompt, verbose = FALSE) "LLM response placeholder"
+
+workflow <- build_sql_agent(
+  model = my_llm_wrapper,
+  connection = NULL,
+  output = "both",
+  direction = "LR"
+)
+
+save_mermaid_png(
+  x = workflow,
+  file = "pkgdown/assets/sql-agent-workflow.png"
+)
+```
+
 ## Step 1: Prepare a Database
 
 ``` r
