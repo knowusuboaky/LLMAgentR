@@ -73,7 +73,9 @@ Sys.setenv(
 
 ## LLM Support (Minimal Wrapper)
 
-The `chatLLM` package allows you to interact with large language models (LLMs) effortlessly - either through direct calls or via reusable minimal wrappers.
+The `chatLLM` package allows you to interact with large language models
+(LLMs) effortlessly - either through direct calls or via reusable
+minimal wrappers.
 
 ### Load the Package
 
@@ -154,7 +156,10 @@ my_llm_wrapper <- call_llm(
 
 ## Related Package: [`chatLLM`](https://cran.r-project.org/package=chatLLM)
 
-The [`chatLLM`](https://github.com/knowusuboaky/chatLLM) package (now available on CRAN) offers a modular interface for interacting with LLM providers including **OpenAI**, **Groq**, **Anthropic**, **DeepSeek**, **DashScope**, and **GitHub Models**.
+The [`chatLLM`](https://github.com/knowusuboaky/chatLLM) package (now
+available on CRAN) offers a modular interface for interacting with LLM
+providers including **OpenAI**, **Groq**, **Anthropic**, **DeepSeek**,
+**DashScope**, and **GitHub Models**.
 
 ``` r
 install.packages("chatLLM")
@@ -203,4 +208,5 @@ A full index page is also available:
 
 ## License
 
-MIT (c) [Kwadwo Daddy Nyame Owusu Boakye](mailto:kwadwo.owusuboakye@outlook.com)
+MIT (c) [Kwadwo Daddy Nyame Owusu
+Boakye](mailto:kwadwo.owusuboakye@outlook.com)
