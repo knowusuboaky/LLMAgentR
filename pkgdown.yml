@@ -2,9 +2,21 @@ pandoc: 3.1.11
 pkgdown: 2.2.0
 pkgdown_sha: ~
 articles:
+  agent-index: agent-index.html
+  code-agent: code-agent.html
   custom-agents: custom-agents.html
+  data-cleaning-agent: data-cleaning-agent.html
+  data-wrangling-agent: data-wrangling-agent.html
+  document-summarizer-agent: document-summarizer-agent.html
+  feature-engineering-agent: feature-engineering-agent.html
+  forecasting-agent: forecasting-agent.html
+  interpreter-agent: interpreter-agent.html
   multi-agent-teams: multi-agent-teams.html
-last_built: 2026-02-14T16:32Z
+  research-agent: research-agent.html
+  sql-agent: sql-agent.html
+  visualization-agent: visualization-agent.html
+  weather-agent: weather-agent.html
+last_built: 2026-02-14T16:43Z
 urls:
   reference: https://knowusuboaky.github.io/LLMAgentR/reference
   article: https://knowusuboaky.github.io/LLMAgentR/articles
