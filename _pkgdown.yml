@@ -6,6 +6,17 @@ template:
     - assets/monthly_charges_vs_churn.html
     - assets/forecast_dark_plot.html
     - assets/forecast_light_plot.html
+    - assets/code-agent-workflow.png
+    - assets/sql-agent-workflow.png
+    - assets/research-agent-workflow.png
+    - assets/interpreter-agent-workflow.png
+    - assets/document-summarizer-agent-workflow.png
+    - assets/data-cleaning-agent-workflow.png
+    - assets/forecasting-agent-workflow.png
+    - assets/data-wrangling-agent-workflow.png
+    - assets/weather-agent-workflow.png
+    - assets/feature-engineering-agent-workflow.png
+    - assets/visualization-agent-workflow.png
 
 navbar:
   structure:

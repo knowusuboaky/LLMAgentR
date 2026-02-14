@@ -16,6 +16,10 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 `build_forecasting_agent()` creates a forecasting workflow with model
 recommendation, code generation, retries, execution, and explanation.
 
+## Workflow Diagram
+
+![](../forecasting-agent-workflow.png)
+
 ## Step 1: Prepare Example Data
 
 ```{r, eval = FALSE}
@@ -57,4 +61,3 @@ str(final_state)
 - Ensure your data has a time column and target value column.
 - Start with one series before scaling to many IDs.
 - Use the explanation output to review model choices.
-

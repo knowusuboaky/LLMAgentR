@@ -16,6 +16,10 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 `build_feature_engineering_agent()` creates/derives features to improve model
 performance and explains the transformation logic.
 
+## Workflow Diagram
+
+![](../feature-engineering-agent-workflow.png)
+
 ## Step 1: Build the Agent
 
 ```{r, eval = FALSE}
@@ -54,4 +58,3 @@ str(final_state)
 - Always set `target_variable` for supervised tasks.
 - Review engineered features for leakage before training models.
 - Keep human validation on for high-stakes use cases.
-

@@ -16,6 +16,10 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 `build_visualization_agent()` generates visualization code and explanations
 from data and user chart instructions.
 
+## Workflow Diagram
+
+![](../visualization-agent-workflow.png)
+
 ## Step 1: Build the Agent
 
 ```{r, eval = FALSE}
@@ -53,4 +57,3 @@ str(final_state)
 - Use explicit chart instructions (x, y, grouping, title).
 - Ask for readable themes and clear labels.
 - Keep generated chart code for reproducibility.
-

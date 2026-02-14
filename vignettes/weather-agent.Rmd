@@ -16,6 +16,10 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 `build_weather_agent()` fetches weather data from OpenWeatherMap and asks an LLM
 to produce a user-friendly report.
 
+## Workflow Diagram
+
+![](../weather-agent-workflow.png)
+
 ## Step 1: Configure API Key
 
 ```{r, eval = FALSE}
@@ -48,4 +52,3 @@ str(result)
 - If `weather_api_key = NULL`, the function reads env var key.
 - `units = "metric"` gives Celsius; `"imperial"` gives Fahrenheit.
 - Inspect `weather_raw` when troubleshooting.
-

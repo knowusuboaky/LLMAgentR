@@ -16,6 +16,10 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 `build_data_wrangling_agent()` helps with joins, reshaping, transformations,
 and repeatable wrangling functions.
 
+## Workflow Diagram
+
+![](../data-wrangling-agent-workflow.png)
+
 ## Step 1: Build the Agent
 
 ```{r, eval = FALSE}
@@ -51,4 +55,3 @@ str(final_state)
 - This agent is for structure changes, not only cleaning.
 - Use clear instructions: group, filter, join, pivot, summarize.
 - Review generated function code before production use.
-

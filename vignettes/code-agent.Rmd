@@ -16,6 +16,10 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 `build_code_agent()` helps you generate or debug R code from natural-language
 instructions.
 
+## Workflow Diagram
+
+![](../code-agent-workflow.png)
+
 ## Step 1: Create an LLM Wrapper
 
 ```{r, eval = FALSE}
@@ -53,4 +57,3 @@ str(result)
 - The returned object is a normal R list.
 - Main fields to inspect: `success`, `attempts`, `llm_response`.
 - You can reuse `coder` for many prompts.
-

@@ -16,6 +16,10 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 `build_researcher_agent()` performs web search and asks an LLM to produce a
 research-style answer.
 
+## Workflow Diagram
+
+![](../research-agent-workflow.png)
+
 ## Step 1: Build the Agent
 
 ```{r, eval = FALSE}
@@ -45,4 +49,3 @@ str(result)
 - Set your Tavily key first: `Sys.setenv(TAVILY_API_KEY = "...")`.
 - Inspect `search_results` in the output for source sanity checks.
 - Use this for research summaries, not legal/medical final advice.
-

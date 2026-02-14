@@ -16,6 +16,10 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 `build_interpreter_agent()` turns technical outputs (tables, metrics, model
 summaries) into plain-language interpretation.
 
+## Workflow Diagram
+
+![](../interpreter-agent-workflow.png)
+
 ## Step 1: Build a Reusable Interpreter
 
 ```{r, eval = FALSE}
@@ -46,4 +50,3 @@ str(result)
 - The closure pattern lets you reuse one configured agent.
 - Main fields: `success`, `attempts`, and `interpretation`.
 - Keep raw technical output in your records for traceability.
-

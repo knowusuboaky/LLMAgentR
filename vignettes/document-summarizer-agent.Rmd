@@ -16,6 +16,10 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 `build_doc_summarizer_agent()` summarizes documents (PDF, DOCX, PPTX, TXT, or
 plain text) into structured output.
 
+## Workflow Diagram
+
+![](../document-summarizer-agent-workflow.png)
+
 ## Step 1: Build the Summarizer
 
 ```{r, eval = FALSE}
@@ -43,4 +47,3 @@ str(result)
 - Start with plain text to validate your setup.
 - Then switch to file paths or URLs.
 - Tune `chunk_size` and `overlap` for large documents.
-
