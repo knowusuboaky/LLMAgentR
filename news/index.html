@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">LLMAgentR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -16,10 +16,30 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/agent-index.html">Agent Index</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="../articles/code-agent.html">Code Generation Agent</a></li>
+    <li><a class="dropdown-item" href="../articles/sql-agent.html">SQL Query Agent</a></li>
+    <li><a class="dropdown-item" href="../articles/research-agent.html">Research Agent</a></li>
+    <li><a class="dropdown-item" href="../articles/interpreter-agent.html">Interpreter Agent</a></li>
+    <li><a class="dropdown-item" href="../articles/document-summarizer-agent.html">Document Summarizer Agent</a></li>
+    <li><a class="dropdown-item" href="../articles/data-cleaning-agent.html">Data Cleaning Agent</a></li>
+    <li><a class="dropdown-item" href="../articles/forecasting-agent.html">Forecasting Agent</a></li>
+    <li><a class="dropdown-item" href="../articles/data-wrangling-agent.html">Data Wrangling Agent</a></li>
+    <li><a class="dropdown-item" href="../articles/weather-agent.html">Weather Agent</a></li>
+    <li><a class="dropdown-item" href="../articles/feature-engineering-agent.html">Feature Engineering Agent</a></li>
+    <li><a class="dropdown-item" href="../articles/visualization-agent.html">Visualization Agent</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="../articles/custom-agents.html">Building Custom Agents</a></li>
+    <li><a class="dropdown-item" href="../articles/multi-agent-teams.html">Building Multi-Agent Teams</a></li>
+  </ul></li>
 <li class="active nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
-<li class="nav-item"><a class="external-link nav-link" href="https://github.com/knowusuboaky/LLMAgentR/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/knowusuboaky/LLMAgentR" aria-label="GitHub"><span class="fa fa-github"></span></a></li>
+<li class="nav-item"><h6 class="dropdown-header" data-toc-skip>0.3.1c</h6></li>
       </ul></div>
 
 
@@ -33,16 +53,24 @@
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.3.0" id="llmagentr-030-upcoming-release--may-2025">LLMAgentR 0.3.0 (Upcoming Release – May 2025)<a class="anchor" aria-label="anchor" href="#llmagentr-030-upcoming-release--may-2025"></a></h2>
+<h2 class="pkg-version" data-toc-text="0.3.1" id="llmagentr-031-upcoming-release---february-2026">LLMAgentR 0.3.1 (Upcoming Release - February 2026)<a class="anchor" aria-label="anchor" href="#llmagentr-031-upcoming-release---february-2026"></a></h2>
 <div class="section level3">
-<h3 id="new-features-0-3-0">New Features<a class="anchor" aria-label="anchor" href="#new-features-0-3-0"></a></h3>
-<ul><li><p><strong>Reusable Code Agent with Builder Pattern</strong><br>
+<h3 id="new-features-0-3-1">New Features<a class="anchor" aria-label="anchor" href="#new-features-0-3-1"></a></h3>
+<ul><li><p><strong>Custom Agent Builder API</strong><br>
+Added <code><a href="../reference/build_custom_agent.html">build_custom_agent()</a></code> for creating user-defined graph/state-machine agents from custom node functions, static edges, and conditional edges.</p></li>
+<li><p><strong>Exported State-Graph Primitives</strong><br>
+Exported <code><a href="../reference/state_graph_utils.html">StateGraph()</a></code>, <code><a href="../reference/state_graph_utils.html">make_node()</a></code>, <code><a href="../reference/state_graph_utils.html">make_edge()</a></code>, <code><a href="../reference/state_graph_utils.html">make_command()</a></code>, and <code><a href="../reference/state_graph_utils.html">interrupt()</a></code> to support custom workflow construction.</p></li>
+<li><p><strong>LangGraph-Style Mermaid Export</strong><br>
+Added <code><a href="../reference/as_mermaid.html">compile_graph()</a></code> and <code><a href="../reference/as_mermaid.html">as_mermaid()</a></code> for Mermaid visualization, including optional subgraph grouping and graph direction control.</p></li>
+<li><p><strong>PNG Graph Export Utility</strong><br>
+Added <code><a href="../reference/as_mermaid.html">save_mermaid_png()</a></code> to render Mermaid graph text (or compiled graph objects) into PNG files via Mermaid CLI (<code>mmdc</code>).</p></li>
+<li><p><strong>Reusable Code Agent with Builder Pattern</strong><br>
 The <code><a href="../reference/build_code_agent.html">build_code_agent()</a></code> function now supports a builder pattern. If <code>user_input</code> is omitted, the function returns a reusable agent (closure) that can handle multiple queries interactively. This allows for flexible integration in iterative coding workflows, similar to the existing <code><a href="../reference/build_researcher_agent.html">build_researcher_agent()</a></code>.</p></li>
 <li><p><strong>Reusable Interpreter Agent</strong><br>
 The <code><a href="../reference/build_interpreter_agent.html">build_interpreter_agent()</a></code> function now also supports a builder pattern. When <code>code_output</code> is omitted, it returns a reusable interpreter function that can process multiple outputs (tables, model results, charts, etc.) on demand. This provides a consistent interface for explaining analysis results dynamically.</p></li>
 </ul></div>
 <div class="section level3">
-<h3 id="improvements-0-3-0">Improvements<a class="anchor" aria-label="anchor" href="#improvements-0-3-0"></a></h3>
+<h3 id="improvements-0-3-1">Improvements<a class="anchor" aria-label="anchor" href="#improvements-0-3-1"></a></h3>
 <ul><li>
 <strong>Dual Invocation Support</strong><br>
 Users can now call both <code><a href="../reference/build_code_agent.html">build_code_agent()</a></code> and <code><a href="../reference/build_interpreter_agent.html">build_interpreter_agent()</a></code> in two ways:
@@ -56,7 +84,7 @@ Users can now call both <code><a href="../reference/build_code_agent.html">build
 The roxygen examples have been expanded to illustrate both usage patterns clearly for both agents, including structured return objects and typical use cases.</li>
 </ul></div>
 <div class="section level3">
-<h3 id="compatibility-0-3-0">Compatibility<a class="anchor" aria-label="anchor" href="#compatibility-0-3-0"></a></h3>
+<h3 id="compatibility-0-3-1">Compatibility<a class="anchor" aria-label="anchor" href="#compatibility-0-3-1"></a></h3>
 <ul><li>This update is fully backward-compatible. Existing calls to <code><a href="../reference/build_code_agent.html">build_code_agent()</a></code> and <code><a href="../reference/build_interpreter_agent.html">build_interpreter_agent()</a></code> that use the one-shot pattern will continue to work without modification.</li>
 </ul></div>
 </div>
@@ -69,7 +97,7 @@ The roxygen examples have been expanded to illustrate both usage patterns clearl
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.2.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
 </div>
 
     </footer></div>

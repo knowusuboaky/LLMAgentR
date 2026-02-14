@@ -1,0 +1,85 @@
+# Build a Data Wrangling Agent
+
+Constructs a state graph-based agent that recommends, generates,
+executes, fixes, and explains data wrangling transformations based on
+user instructions and dataset structure. The resulting function handles
+list or single data frame inputs and produces a cleaned dataset.
+
+## Arguments
+
+- model:
+
+  A function that takes a prompt string and returns LLM-generated
+  output.
+
+- human_validation:
+
+  Logical; whether to enable manual review step before code execution.
+
+- bypass_recommended_steps:
+
+  Logical; skip initial recommendation of wrangling steps.
+
+- bypass_explain_code:
+
+  Logical; skip final explanation step after wrangling.
+
+- verbose:
+
+  Logical; whether to print progress messages (default: TRUE)
+
+## Value
+
+A callable agent function that mutates a provided \`state\` list by
+populating: - \`data_wrangled\`: the final cleaned data frame, -
+\`data_wrangler_function\`: the code used, - \`data_wrangler_error\`:
+any execution error (if occurred), - \`wrangling_report\`: LLM-generated
+explanation (if \`bypass_explain_code = FALSE\`)
+
+## Examples
+
+``` r
+if (FALSE) { # \dontrun{
+# 1) Simulate multiple data frames with a common ID
+df1 <- data.frame(
+  ID = c(1, 2, 3, 4),
+  Name = c("John", "Jane", "Jim", "Jill"),
+  stringsAsFactors = FALSE
+)
+
+df2 <- data.frame(
+  ID = c(1, 2, 3, 4),
+  Age = c(25, 30, 35, 40),
+  stringsAsFactors = FALSE
+)
+
+df3 <- data.frame(
+  ID = c(1, 2, 3, 4),
+  Education = c("Bachelors", "Masters", "PhD", "MBA"),
+  stringsAsFactors = FALSE
+)
+
+# 2) Combine into a list
+data <- list(df1, df2, df3)
+
+# 3) Create the agent
+data_wrangling_agent <- build_data_wrangling_agent(
+  model = my_llm_wrapper,
+  human_validation = FALSE,
+  bypass_recommended_steps = FALSE,
+  bypass_explain_code = FALSE,
+  verbose = FALSE
+)
+
+# 4) Define the initial state
+initial_state <- list(
+  data_raw = data,
+  user_instructions = "Merge the data frames on the ID column.",
+  max_retries = 3,
+  retry_count = 0
+)
+
+# 5) Run the agent
+final_state <- data_wrangling
+} # }
+```
