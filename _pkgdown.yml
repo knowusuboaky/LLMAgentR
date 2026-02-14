@@ -61,7 +61,7 @@ navbar:
       href: https://github.com/knowusuboaky/LLMAgentR
       aria-label: GitHub
     release:
-      text: 0.3.1c
+      text: 0.3.2
 
 reference:
   - title: "Functions"

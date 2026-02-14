@@ -7,6 +7,7 @@
 ^vignettes$
 ^vignettes/.*
 ^pkgdown$
+^pkgdown/.*
 ^README\.html$
 ^check$
 ^check/.*$
@@ -15,3 +16,7 @@
 ^\.Rhistory$
 ^\.RData$
 ^LICENSE\.md$
+^inst/assets$
+^inst/assets/.*
+^tests/testthat/test-data$
+^tests/testthat/test-data/.*

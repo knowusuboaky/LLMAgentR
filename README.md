@@ -48,7 +48,7 @@ remotes::install_github("knowusuboaky/LLMAgentR")
 ```
 
 See the full [function
-reference](https://knowusuboaky.github.io/LLMAgentR/reference) or the
+reference](https://knowusuboaky.github.io/LLMAgentR/reference/) or the
 [package website](https://knowusuboaky.github.io/LLMAgentR/) for more
 details.
 
