@@ -10,7 +10,6 @@ vignette: >
 ```{r, include = FALSE}
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 ```
-
 ## What This Agent Does
 
 `build_code_agent()` helps you generate or debug R code from natural-language
@@ -20,6 +19,24 @@ instructions.
 
 ![](../code-agent-workflow.png)
 
+## Generate Mermaid PNGs
+
+```{r, eval = FALSE}
+library(LLMAgentR)
+
+my_llm_wrapper <- function(prompt, verbose = FALSE) "LLM response placeholder"
+
+workflow <- build_code_agent(
+  llm = my_llm_wrapper,
+  output = "both",
+  direction = "LR"
+)
+
+save_mermaid_png(
+  x = workflow,
+  file = "pkgdown/assets/code-agent-workflow.png"
+)
+```
 ## Step 1: Create an LLM Wrapper
 
 ```{r, eval = FALSE}
@@ -28,7 +45,6 @@ my_llm_wrapper <- function(prompt, verbose = FALSE) {
   "LLM response placeholder"
 }
 ```
-
 ## Step 2: Build a Reusable Agent
 
 ```{r, eval = FALSE}
@@ -41,7 +57,6 @@ coder <- build_code_agent(
   verbose = FALSE
 )
 ```
-
 ## Step 3: Run a Task
 
 ```{r, eval = FALSE}
@@ -51,9 +66,15 @@ result <- coder(
 
 str(result)
 ```
-
 ## Notes for Beginners
 
 - The returned object is a normal R list.
 - Main fields to inspect: `success`, `attempts`, `llm_response`.
 - You can reuse `coder` for many prompts.
+
+
+
+
+
+
+

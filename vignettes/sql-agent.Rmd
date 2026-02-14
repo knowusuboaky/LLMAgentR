@@ -10,7 +10,6 @@ vignette: >
 ```{r, include = FALSE}
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 ```
-
 ## What This Agent Does
 
 `build_sql_agent()` generates SQL from user instructions, executes it, retries
@@ -20,6 +19,25 @@ on errors, and can explain the final query.
 
 ![](../sql-agent-workflow.png)
 
+## Generate Mermaid PNGs
+
+```{r, eval = FALSE}
+library(LLMAgentR)
+
+my_llm_wrapper <- function(prompt, verbose = FALSE) "LLM response placeholder"
+
+workflow <- build_sql_agent(
+  model = my_llm_wrapper,
+  connection = NULL,
+  output = "both",
+  direction = "LR"
+)
+
+save_mermaid_png(
+  x = workflow,
+  file = "pkgdown/assets/sql-agent-workflow.png"
+)
+```
 ## Step 1: Prepare a Database
 
 ```{r, eval = FALSE}
@@ -32,7 +50,6 @@ dbWriteTable(conn, "sales", data.frame(
   amount = c(120, 80, 90)
 ))
 ```
-
 ## Step 2: Build the Agent
 
 ```{r, eval = FALSE}
@@ -49,7 +66,6 @@ sql_agent <- build_sql_agent(
   verbose = FALSE
 )
 ```
-
 ## Step 3: Run the Workflow
 
 ```{r, eval = FALSE}
@@ -62,9 +78,15 @@ initial_state <- list(
 final_state <- sql_agent(initial_state)
 str(final_state)
 ```
-
 ## Notes for Beginners
 
 - Always validate generated SQL for production use.
 - Keep `human_validation = TRUE` for high-stakes databases.
 - Close the connection when done: `dbDisconnect(conn)`.
+
+
+
+
+
+
+

@@ -75,8 +75,127 @@ build_code_agent <- function(
     user_input = NULL,
     max_tries = 3,
     backoff = 2,
-    verbose = TRUE
+    verbose = TRUE,
+    output = c("agent", "mermaid", "both"),
+    direction = c("TD", "LR"),
+    subgraphs = NULL,
+    style = TRUE
 ) {
+  output <- match.arg(output)
+  direction <- match.arg(direction)
+
+  if (!identical(output, "agent")) {
+    `%||%` <- function(a, b) if (!is.null(a)) a else b
+
+    node_functions <- list(
+      receive_task = function(state) {
+        task <- state$task %||% state$query %||% state$user_input
+        if (is.null(task) || !nzchar(trimws(task))) {
+          stop("No task found. Provide `task`, `query`, or `user_input` in state.")
+        }
+        list(task = task, attempts = 0L, response = NULL, llm_error = NULL, route = NULL)
+      },
+      assemble_system_prompt = function(state) {
+        prompt_used <- system_prompt %||% "You are a highly proficient R coding assistant."
+        full_prompt <- sprintf("%s\n\nUSER TASK:\n%s", prompt_used, state$task)
+        list(system_prompt = prompt_used, full_prompt = full_prompt)
+      },
+      call_llm = function(state) {
+        attempt <- as.integer(state$attempts %||% 0L) + 1L
+        llm_response <- NULL
+        llm_error <- NULL
+
+        tryCatch({
+          llm_response <- if ("verbose" %in% names(formals(llm))) {
+            llm(prompt = state$full_prompt, verbose = verbose)
+          } else {
+            llm(prompt = state$full_prompt)
+          }
+          if (is.null(llm_response) || !nzchar(trimws(llm_response))) {
+            stop("Empty response received from LLM.")
+          }
+        }, error = function(e) {
+          llm_error <<- e$message
+        })
+
+        list(attempts = attempt, response = llm_response, llm_error = llm_error)
+      },
+      check_response = function(state) {
+        max_attempts <- as.integer(state$max_tries %||% max_tries)
+        has_response <- !is.null(state$response) && nzchar(trimws(state$response))
+        route <- if (has_response) {
+          "success"
+        } else if (as.integer(state$attempts %||% 0L) < max_attempts) {
+          "retry"
+        } else {
+          "failed"
+        }
+        list(route = route)
+      },
+      backoff_retry = function(state) {
+        attempt <- as.integer(state$attempts %||% 1L)
+        wait_sec <- as.numeric(state$backoff %||% backoff) * (2 ^ max(0, attempt - 1L))
+        Sys.sleep(wait_sec)
+        list()
+      },
+      return_success = function(state) {
+        list(
+          input = state$task,
+          llm_response = state$response,
+          system_prompt = state$system_prompt,
+          success = TRUE,
+          attempts = as.integer(state$attempts %||% 1L)
+        )
+      },
+      return_failure = function(state) {
+        list(
+          input = state$task,
+          llm_response = paste("LLM call failed:", state$llm_error %||% "Unknown error"),
+          system_prompt = state$system_prompt,
+          success = FALSE,
+          attempts = as.integer(state$attempts %||% 1L)
+        )
+      }
+    )
+
+    edges <- list(
+      c("receive_task", "assemble_system_prompt"),
+      c("assemble_system_prompt", "call_llm"),
+      c("call_llm", "check_response"),
+      c("backoff_retry", "call_llm"),
+      c("return_success", "__end__"),
+      c("return_failure", "__end__")
+    )
+
+    conditional_edges <- list(
+      list(
+        from = "check_response",
+        condition = function(state) state$route %||% "failed",
+        mapping = list(
+          success = "return_success",
+          retry = "backoff_retry",
+          failed = "return_failure"
+        )
+      )
+    )
+
+    compiled <- build_custom_agent(
+      node_functions = node_functions,
+      entry_point = "receive_task",
+      edges = edges,
+      conditional_edges = conditional_edges,
+      output = "both",
+      direction = direction,
+      subgraphs = subgraphs,
+      style = style
+    )
+
+    if (identical(output, "mermaid")) {
+      return(compiled$mermaid)
+    }
+    return(compiled)
+  }
+
   # ------------------------------------------------------------------------
   # Helper that does the actual work for a single task ---------------------
   # ------------------------------------------------------------------------

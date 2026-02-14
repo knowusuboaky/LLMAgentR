@@ -640,41 +640,39 @@ create_coding_agent_graph <- function(
     human_review_node_name = "human_review",
     checkpointer = NULL,
     bypass_recommended_steps = FALSE,
-    bypass_explain_code = FALSE
+    bypass_explain_code = FALSE,
+    output = c("agent", "mermaid", "both"),
+    direction = c("TD", "LR"),
+    subgraphs = NULL,
+    style = TRUE
 ) {
+  output <- match.arg(output)
+  direction <- match.arg(direction)
 
-  workflow <- StateGraph()
-
-  # Always add create, execute, and fix nodes
-  workflow$add_node(create_code_node_name, node_functions[[create_code_node_name]])
-  workflow$add_node(execute_code_node_name, node_functions[[execute_code_node_name]])
-  workflow$add_node(fix_code_node_name, node_functions[[fix_code_node_name]])
-
-  # Conditionally add the recommended-steps node
+  graph_nodes <- list()
+  graph_nodes[[create_code_node_name]] <- node_functions[[create_code_node_name]]
+  graph_nodes[[execute_code_node_name]] <- node_functions[[execute_code_node_name]]
+  graph_nodes[[fix_code_node_name]] <- node_functions[[fix_code_node_name]]
   if (!bypass_recommended_steps) {
-    workflow$add_node(recommended_steps_node_name, node_functions[[recommended_steps_node_name]])
+    graph_nodes[[recommended_steps_node_name]] <- node_functions[[recommended_steps_node_name]]
   }
-
-  # Conditionally add the human review node
   if (human_validation) {
-    workflow$add_node(human_review_node_name, node_functions[[human_review_node_name]])
+    graph_nodes[[human_review_node_name]] <- node_functions[[human_review_node_name]]
   }
-
-  # Conditionally add the explanation node
   if (!bypass_explain_code) {
-    workflow$add_node(explain_code_node_name, node_functions[[explain_code_node_name]])
+    graph_nodes[[explain_code_node_name]] <- node_functions[[explain_code_node_name]]
   }
 
-  # Set the entry point
   entry_point <- if (bypass_recommended_steps) create_code_node_name else recommended_steps_node_name
-  workflow$set_entry_point(entry_point)
-
+  edges <- list()
   if (!bypass_recommended_steps) {
-    workflow$add_edge(recommended_steps_node_name, create_code_node_name)
+    edges[[length(edges) + 1L]] <- c(recommended_steps_node_name, create_code_node_name)
   }
-
-  workflow$add_edge(create_code_node_name, execute_code_node_name)
-  workflow$add_edge(fix_code_node_name, execute_code_node_name)
+  edges[[length(edges) + 1L]] <- c(create_code_node_name, execute_code_node_name)
+  edges[[length(edges) + 1L]] <- c(fix_code_node_name, execute_code_node_name)
+  if (!bypass_explain_code) {
+    edges[[length(edges) + 1L]] <- c(explain_code_node_name, "__end__")
+  }
 
   # Helper to check for error and retry possibility
   error_and_can_retry <- function(s) {
@@ -684,54 +682,63 @@ create_coding_agent_graph <- function(
     !is.null(err) && !is.null(retr) && !is.null(maxr) && (retr < maxr)
   }
 
+  conditional_edges <- list()
   if (human_validation) {
-    workflow$add_conditional_edges(
-      execute_code_node_name,
-      function(s) {
+    conditional_edges[[length(conditional_edges) + 1L]] <- list(
+      from = execute_code_node_name,
+      condition = function(s) {
         if (error_and_can_retry(s)) "fix_code" else "human_review"
       },
-      list(
+      mapping = list(
         human_review = human_review_node_name,
         fix_code = fix_code_node_name
       )
     )
   } else {
     if (!bypass_explain_code) {
-      workflow$add_conditional_edges(
-        execute_code_node_name,
-        function(s) {
+      conditional_edges[[length(conditional_edges) + 1L]] <- list(
+        from = execute_code_node_name,
+        condition = function(s) {
           if (error_and_can_retry(s)) "fix_code" else "explain_code"
         },
-        list(
+        mapping = list(
           fix_code = fix_code_node_name,
           explain_code = explain_code_node_name
         )
       )
     } else {
-      workflow$add_conditional_edges(
-        execute_code_node_name,
-        function(s) {
+      conditional_edges[[length(conditional_edges) + 1L]] <- list(
+        from = execute_code_node_name,
+        condition = function(s) {
           if (error_and_can_retry(s)) "fix_code" else "END"
         },
-        list(
+        mapping = list(
           fix_code = fix_code_node_name,
-          END = workflow$END_NODE_NAME
+          END = "__end__"
         )
       )
     }
   }
 
-  if (!bypass_explain_code) {
-    workflow$add_edge(explain_code_node_name, workflow$END_NODE_NAME)
-  }
+  compiled <- build_custom_agent(
+    node_functions = graph_nodes,
+    entry_point = entry_point,
+    edges = edges,
+    conditional_edges = conditional_edges,
+    checkpointer = if (human_validation && !is.null(checkpointer)) checkpointer else NULL,
+    output = if (identical(output, "agent")) "agent" else "both",
+    direction = direction,
+    subgraphs = subgraphs,
+    style = style
+  )
 
-  # Compile the workflow
-  if (human_validation && !is.null(checkpointer)) {
-    app <- workflow$compile(checkpointer = checkpointer)
-  } else {
-    app <- workflow$compile()
+  if (identical(output, "agent")) {
+    return(compiled)
   }
-  app
+  if (identical(output, "mermaid")) {
+    return(compiled$mermaid)
+  }
+  compiled
 }
 
 ###############################################################################
@@ -1368,7 +1375,13 @@ build_forecasting_agent <- function(
     bypass_explain_code = FALSE,
     mode = "light",
     line_width = 3,
-    verbose = FALSE) {
+    verbose = FALSE,
+    output = c("agent", "mermaid", "both"),
+    direction = c("TD", "LR"),
+    subgraphs = NULL,
+    style = TRUE) {
+  output <- match.arg(output)
+  direction <- match.arg(direction)
 
   # no human_validation needed
   human_validation = FALSE
@@ -1409,14 +1422,35 @@ build_forecasting_agent <- function(
     human_review_node_name = "human_review",
     checkpointer = NULL,
     bypass_recommended_steps = bypass_recommended_steps,
-    bypass_explain_code = bypass_explain_code
+    bypass_explain_code = bypass_explain_code,
+    output = output,
+    direction = direction,
+    subgraphs = subgraphs,
+    style = style
   )
 
-  # Return a function that can be invoked with state
-  function(state) {
+  if (identical(output, "mermaid")) {
+    return(app)
+  }
+
+  run_wrapper <- function(state) {
     if (is.null(state$retry_count)) state$retry_count <- 0
     if (is.null(state$max_retries)) state$max_retries <- 3
 
-    app(state)
+    if (identical(output, "agent")) {
+      app(state)
+    } else {
+      app$run(state)
+    }
   }
+
+  if (identical(output, "agent")) {
+    return(run_wrapper)
+  }
+
+  list(
+    run = run_wrapper,
+    graph = app$graph,
+    mermaid = app$mermaid
+  )
 }

@@ -760,27 +760,24 @@ build_sql_agent <- function(
     human_validation      = FALSE,
     bypass_recommended_steps = FALSE,
     bypass_explain_code   = FALSE,
-    verbose               = TRUE
+    verbose               = TRUE,
+    output                = c("agent", "mermaid", "both"),
+    direction             = c("TD", "LR"),
+    subgraphs             = NULL,
+    style                 = TRUE
 ) {
+  output <- match.arg(output)
+  direction <- match.arg(direction)
 
-  # Create the graph
-  workflow <- StateGraph()
-
-  # NODES
+  node_functions <- list()
   if (!bypass_recommended_steps) {
-    workflow$add_node(
-      "recommend_sql_steps",
-      node_recommend_sql_steps(model, connection, n_samples, verbose)
-    )
+    node_functions$recommend_sql_steps <- node_recommend_sql_steps(model, connection, n_samples, verbose)
   }
 
-  workflow$add_node(
-    "create_sql_query_code",
-    node_create_sql_query_code(model, connection, n_samples, bypass_recommended_steps, verbose)
+  node_functions$create_sql_query_code <- node_create_sql_query_code(
+    model, connection, n_samples, bypass_recommended_steps, verbose
   )
-
-  workflow$add_node(
-    "execute_sql_database_code",
+  node_functions$execute_sql_database_code <- (
     function(state) {
       node_func_execute_agent_from_sql_connection(
         state,
@@ -797,15 +794,10 @@ build_sql_agent <- function(
       )
     }
   )
-
-  workflow$add_node(
-    "fix_sql_database_code",
-    node_fix_sql_database_code(model,connection, verbose)
-  )
+  node_functions$fix_sql_database_code <- node_fix_sql_database_code(model, connection, verbose)
 
   if (human_validation) {
-    workflow$add_node(
-      "human_review",
+    node_functions$human_review <- (
       function(state) {
         prompt_text <- "Are these SQL agent instructions correct# (Type 'yes' or corrections)\n%1$s"
         review_fn <- node_func_human_review(
@@ -821,8 +813,7 @@ build_sql_agent <- function(
   }
 
   if (!bypass_explain_code) {
-    workflow$add_node(
-      "explain_sql_database_code",
+    node_functions$explain_sql_database_code <- (
       function(state) {
         node_func_explain_agent_code(
           state,
@@ -841,21 +832,21 @@ Explain the SQL steps in this function. Keep it concise:\n\n{code}
     )
   }
 
-  # ENTRY
   entry_point <- if (bypass_recommended_steps) {
     "create_sql_query_code"
   } else {
     "recommend_sql_steps"
   }
-  workflow$set_entry_point(entry_point)
 
-  # EDGES
+  edges <- list()
   if (!bypass_recommended_steps) {
-    workflow$add_edge("recommend_sql_steps", "create_sql_query_code")
+    edges[[length(edges) + 1L]] <- c("recommend_sql_steps", "create_sql_query_code")
   }
-
-  workflow$add_edge("create_sql_query_code", "execute_sql_database_code")
-  workflow$add_edge("fix_sql_database_code", "execute_sql_database_code")
+  edges[[length(edges) + 1L]] <- c("create_sql_query_code", "execute_sql_database_code")
+  edges[[length(edges) + 1L]] <- c("fix_sql_database_code", "execute_sql_database_code")
+  if (!bypass_explain_code) {
+    edges[[length(edges) + 1L]] <- c("explain_sql_database_code", "__end__")
+  }
 
   error_and_can_retry <- function(s) {
     err  <- s$sql_database_error
@@ -864,56 +855,68 @@ Explain the SQL steps in this function. Keep it concise:\n\n{code}
     !is.null(err) && !is.null(retr) && !is.null(maxr) && (retr < maxr)
   }
 
+  conditional_edges <- list()
   if (human_validation) {
-    workflow$add_conditional_edges(
-      "execute_sql_database_code",
-      function(s) {
+    conditional_edges[[1L]] <- list(
+      from = "execute_sql_database_code",
+      condition = function(s) {
         if (error_and_can_retry(s)) {
           "fix_code"
         } else {
           "human_review"
         }
       },
-      list(
+      mapping = list(
         "human_review" = "human_review",
         "fix_code"     = "fix_sql_database_code"
       )
     )
   } else {
     if (!bypass_explain_code) {
-      workflow$add_conditional_edges(
-        "execute_sql_database_code",
-        function(s) {
+      conditional_edges[[1L]] <- list(
+        from = "execute_sql_database_code",
+        condition = function(s) {
           if (error_and_can_retry(s)) {
             "fix_code"
           } else {
             "explain_code"
           }
         },
-        list(
+        mapping = list(
           "fix_code"     = "fix_sql_database_code",
           "explain_code" = "explain_sql_database_code"
         )
       )
     } else {
-      workflow$add_conditional_edges(
-        "execute_sql_database_code",
-        function(s) {
+      conditional_edges[[1L]] <- list(
+        from = "execute_sql_database_code",
+        condition = function(s) {
           if (error_and_can_retry(s)) "fix_code" else "END"
         },
-        list(
+        mapping = list(
           "fix_code" = "fix_sql_database_code",
-          "END"      = workflow$END_NODE_NAME
+          "END"      = "__end__"
         )
       )
     }
   }
 
-  if (!bypass_explain_code) {
-    workflow$add_edge("explain_sql_database_code", workflow$END_NODE_NAME)
-  }
+  compiled <- build_custom_agent(
+    node_functions = node_functions,
+    entry_point = entry_point,
+    edges = edges,
+    conditional_edges = conditional_edges,
+    output = if (identical(output, "agent")) "agent" else "both",
+    direction = direction,
+    subgraphs = subgraphs,
+    style = style
+  )
 
-  # compile
-  app <- workflow$compile()
-  app
+  if (identical(output, "agent")) {
+    return(compiled)
+  }
+  if (identical(output, "mermaid")) {
+    return(compiled$mermaid)
+  }
+  compiled
 }

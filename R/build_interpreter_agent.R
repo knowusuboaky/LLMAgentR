@@ -63,8 +63,126 @@ build_interpreter_agent <- function(
     code_output        = NULL,
     max_tries          = 3,
     backoff            = 2,
-    verbose            = TRUE
+    verbose            = TRUE,
+    output             = c("agent", "mermaid", "both"),
+    direction          = c("TD", "LR"),
+    subgraphs          = NULL,
+    style              = TRUE
 ) {
+  output <- match.arg(output)
+  direction <- match.arg(direction)
+
+  if (!identical(output, "agent")) {
+    `%||%` <- function(a, b) if (!is.null(a)) a else b
+
+    node_functions <- list(
+      receive_output = function(state) {
+        output_text <- state$code_output %||% state$output %||% code_output
+        if (is.null(output_text) || !nzchar(trimws(output_text))) {
+          stop("No output provided. Supply `code_output` in state or function arguments.")
+        }
+        list(code_output = output_text, attempts = 0L, response = NULL, llm_error = NULL)
+      },
+      build_interpreter_prompt = function(state) {
+        prompt_template <- interpreter_prompt %||% paste(
+          "You are a versatile data interpreter.",
+          "Explain the following output clearly for technical and non-technical audiences.",
+          "",
+          "{code_output}",
+          sep = "\n"
+        )
+        final_prompt <- sub("{code_output}", state$code_output, prompt_template, fixed = TRUE)
+        list(prompt = final_prompt)
+      },
+      call_llm = function(state) {
+        attempt <- as.integer(state$attempts %||% 0L) + 1L
+        llm_response <- NULL
+        llm_error <- NULL
+        tryCatch({
+          llm_response <- if ("verbose" %in% names(formals(llm))) {
+            llm(prompt = state$prompt, verbose = verbose)
+          } else {
+            llm(prompt = state$prompt)
+          }
+          if (is.null(llm_response) || !nzchar(trimws(llm_response))) {
+            stop("Empty response received from LLM.")
+          }
+        }, error = function(e) {
+          llm_error <<- e$message
+        })
+        list(attempts = attempt, response = llm_response, llm_error = llm_error)
+      },
+      check_response = function(state) {
+        has_response <- !is.null(state$response) && nzchar(trimws(state$response))
+        route <- if (has_response) {
+          "success"
+        } else if (as.integer(state$attempts %||% 0L) < as.integer(state$max_tries %||% max_tries)) {
+          "retry"
+        } else {
+          "failed"
+        }
+        list(route = route)
+      },
+      backoff_retry = function(state) {
+        attempt <- as.integer(state$attempts %||% 1L)
+        wait_sec <- as.numeric(state$backoff %||% backoff) * (2 ^ max(0, attempt - 1L))
+        Sys.sleep(wait_sec)
+        list()
+      },
+      return_interpretation = function(state) {
+        list(
+          prompt = state$prompt,
+          interpretation = state$response,
+          success = TRUE,
+          attempts = as.integer(state$attempts %||% 1L)
+        )
+      },
+      return_failure = function(state) {
+        list(
+          prompt = state$prompt,
+          interpretation = paste("Interpretation failed:", state$llm_error %||% "Unknown error"),
+          success = FALSE,
+          attempts = as.integer(state$attempts %||% 1L)
+        )
+      }
+    )
+
+    edges <- list(
+      c("receive_output", "build_interpreter_prompt"),
+      c("build_interpreter_prompt", "call_llm"),
+      c("call_llm", "check_response"),
+      c("backoff_retry", "call_llm"),
+      c("return_interpretation", "__end__"),
+      c("return_failure", "__end__")
+    )
+    conditional_edges <- list(
+      list(
+        from = "check_response",
+        condition = function(state) state$route %||% "failed",
+        mapping = list(
+          success = "return_interpretation",
+          retry = "backoff_retry",
+          failed = "return_failure"
+        )
+      )
+    )
+
+    compiled <- build_custom_agent(
+      node_functions = node_functions,
+      entry_point = "receive_output",
+      edges = edges,
+      conditional_edges = conditional_edges,
+      output = "both",
+      direction = direction,
+      subgraphs = subgraphs,
+      style = style
+    )
+
+    if (identical(output, "mermaid")) {
+      return(compiled$mermaid)
+    }
+    return(compiled)
+  }
 
   # ----------------------------------------------------------------------
   run_agent <- function(output) {

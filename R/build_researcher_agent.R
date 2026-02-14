@@ -52,8 +52,188 @@ build_researcher_agent <- function(
     max_results   = 5,
     max_tries     = 3,
     backoff       = 2,
-    verbose       = TRUE
+    verbose       = TRUE,
+    output        = c("agent", "mermaid", "both"),
+    direction     = c("TD", "LR"),
+    subgraphs     = NULL,
+    style         = TRUE
 ) {
+  output <- match.arg(output)
+  direction <- match.arg(direction)
+
+  if (!identical(output, "agent")) {
+    `%||%` <- function(a, b) if (!is.null(a)) a else b
+
+    node_functions <- list(
+      resolve_tavily_key = function(state) {
+        key <- state$tavily_api_key %||% tavily_search %||% Sys.getenv("TAVILY_API_KEY", unset = "")
+        list(
+          tavily_api_key = key,
+          query = state$query %||% state$user_query,
+          search_attempt = as.integer(state$search_attempt %||% 0L),
+          llm_attempt = as.integer(state$llm_attempt %||% 0L)
+        )
+      },
+      search_web = function(state) {
+        out <- list(search_attempt = as.integer(state$search_attempt %||% 0L) + 1L)
+        if (!nzchar(state$tavily_api_key %||% "")) {
+          out$search_results <- NULL
+          out$search_error <- "No Tavily API key provided."
+          return(out)
+        }
+        result <- tryCatch(
+          perform_tavily_search(
+            query = state$query %||% "",
+            tavily_search = state$tavily_api_key,
+            max_results = max_results
+          ),
+          error = function(e) e
+        )
+        if (inherits(result, "error")) {
+          out$search_results <- NULL
+          out$search_error <- result$message
+        } else {
+          out$search_results <- result
+          out$search_error <- NULL
+        }
+        out
+      },
+      check_search_results = function(state) {
+        results <- state$search_results$results %||% list()
+        route <- if (length(results) > 0) {
+          "found"
+        } else if (as.integer(state$search_attempt %||% 0L) < as.integer(state$max_tries %||% max_tries) &&
+                   nzchar(state$tavily_api_key %||% "")) {
+          "retry"
+        } else {
+          "none"
+        }
+        list(route = route)
+      },
+      search_backoff = function(state) {
+        attempt <- as.integer(state$search_attempt %||% 1L)
+        wait_sec <- as.numeric(state$backoff %||% backoff) * (2 ^ max(0, attempt - 1L))
+        Sys.sleep(wait_sec)
+        list()
+      },
+      build_prompt_from_results = function(state) {
+        snippets <- paste(
+          vapply(
+            state$search_results$results,
+            function(r) {
+              sprintf("---\n%s\n%s\nSource: %s", r$title %||% "", r$content %||% "", r$url %||% "")
+            },
+            FUN.VALUE = character(1)
+          ),
+          collapse = "\n\n"
+        )
+        prompt_used <- system_prompt %||% "You are a highly skilled web researcher."
+        full_prompt <- sprintf(
+          "%s\n\nUSER QUERY:\n%s\n\nWEB SEARCH RESULTS:\n%s",
+          prompt_used,
+          state$query %||% "",
+          snippets
+        )
+        list(prompt = full_prompt)
+      },
+      build_prompt_without_results = function(state) {
+        prompt_used <- system_prompt %||% "You are a highly skilled web researcher."
+        full_prompt <- sprintf("%s\n\nUSER QUERY:\n%s", prompt_used, state$query %||% "")
+        list(prompt = full_prompt)
+      },
+      call_llm = function(state) {
+        attempt <- as.integer(state$llm_attempt %||% 0L) + 1L
+        llm_response <- NULL
+        llm_error <- NULL
+        tryCatch({
+          llm_response <- if ("verbose" %in% names(formals(llm))) {
+            llm(prompt = state$prompt, verbose = verbose)
+          } else {
+            llm(prompt = state$prompt)
+          }
+          if (is.null(llm_response) || !nzchar(trimws(llm_response))) {
+            stop("Empty response received from LLM.")
+          }
+        }, error = function(e) {
+          llm_error <<- e$message
+        })
+        list(llm_attempt = attempt, llm_response = llm_response, llm_error = llm_error)
+      },
+      check_llm_response = function(state) {
+        route <- if (!is.null(state$llm_response) && nzchar(trimws(state$llm_response))) {
+          "success"
+        } else if (as.integer(state$llm_attempt %||% 0L) < as.integer(state$max_tries %||% max_tries)) {
+          "retry"
+        } else {
+          "failed"
+        }
+        list(route = route)
+      },
+      llm_backoff = function(state) {
+        attempt <- as.integer(state$llm_attempt %||% 1L)
+        wait_sec <- as.numeric(state$backoff %||% backoff) * (2 ^ max(0, attempt - 1L))
+        Sys.sleep(wait_sec)
+        list()
+      },
+      return_research_output = function(state) {
+        list(
+          query = state$query %||% "",
+          prompt = state$prompt %||% "",
+          response = state$llm_response,
+          search_results = state$search_results,
+          success = !is.null(state$llm_response)
+        )
+      }
+    )
+
+    edges <- list(
+      c("resolve_tavily_key", "search_web"),
+      c("search_web", "check_search_results"),
+      c("search_backoff", "search_web"),
+      c("build_prompt_from_results", "call_llm"),
+      c("build_prompt_without_results", "call_llm"),
+      c("call_llm", "check_llm_response"),
+      c("llm_backoff", "call_llm"),
+      c("return_research_output", "__end__")
+    )
+    conditional_edges <- list(
+      list(
+        from = "check_search_results",
+        condition = function(state) state$route %||% "none",
+        mapping = list(
+          found = "build_prompt_from_results",
+          retry = "search_backoff",
+          none = "build_prompt_without_results"
+        )
+      ),
+      list(
+        from = "check_llm_response",
+        condition = function(state) state$route %||% "failed",
+        mapping = list(
+          success = "return_research_output",
+          retry = "llm_backoff",
+          failed = "return_research_output"
+        )
+      )
+    )
+
+    compiled <- build_custom_agent(
+      node_functions = node_functions,
+      entry_point = "resolve_tavily_key",
+      edges = edges,
+      conditional_edges = conditional_edges,
+      output = "both",
+      direction = direction,
+      subgraphs = subgraphs,
+      style = style
+    )
+
+    if (identical(output, "mermaid")) {
+      return(compiled$mermaid)
+    }
+    return(compiled)
+  }
+
   if (verbose) cat("=== STARTING RESEARCHER AGENT ===\n")
 
   ## ------------------------------------------------------------------------

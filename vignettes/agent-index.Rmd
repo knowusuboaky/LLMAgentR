@@ -14,17 +14,84 @@ for each agent.
 
 ## Generate Mermaid PNGs
 
-Use the built-in generator script (`compile_graph()` + `save_mermaid_png()`):
+Use each agent's built-in graph output (`output = "both"`) and save with
+`save_mermaid_png()`:
 
 ```{r, eval = FALSE}
-# From the LLMAgentR project root
-source("pkgdown/generate-agent-workflow-pngs.R")
+library(LLMAgentR)
 
-# Generate all workflow PNGs
-generate_all_agent_workflow_pngs()
+dummy_llm <- function(prompt, verbose = FALSE) "LLM response placeholder"
 
-# Or generate only one workflow PNG
-generate_agent_workflow_png("code-agent")
+workflows <- list(
+  "code-agent" = build_code_agent(
+    llm = dummy_llm,
+    output = "both",
+    direction = "LR"
+  ),
+  "sql-agent" = build_sql_agent(
+    model = dummy_llm,
+    connection = NULL,
+    output = "both",
+    direction = "LR"
+  ),
+  "research-agent" = build_researcher_agent(
+    llm = dummy_llm,
+    tavily_search = "your-tavily-key",
+    output = "both",
+    direction = "LR"
+  ),
+  "interpreter-agent" = build_interpreter_agent(
+    llm = dummy_llm,
+    output = "both",
+    direction = "LR"
+  ),
+  "document-summarizer-agent" = build_doc_summarizer_agent(
+    llm = dummy_llm,
+    output = "both",
+    direction = "LR"
+  ),
+  "data-cleaning-agent" = build_data_cleaning_agent(
+    model = dummy_llm,
+    output = "both",
+    direction = "LR"
+  ),
+  "forecasting-agent" = build_forecasting_agent(
+    model = dummy_llm,
+    output = "both",
+    direction = "LR"
+  ),
+  "data-wrangling-agent" = build_data_wrangling_agent(
+    model = dummy_llm,
+    output = "both",
+    direction = "LR"
+  ),
+  "weather-agent" = build_weather_agent(
+    llm = dummy_llm,
+    location_query = "Accra, Ghana",
+    weather_api_key = "your-openweathermap-key",
+    output = "both",
+    direction = "LR"
+  ),
+  "feature-engineering-agent" = build_feature_engineering_agent(
+    model = dummy_llm,
+    output = "both",
+    direction = "LR"
+  ),
+  "visualization-agent" = build_visualization_agent(
+    model = dummy_llm,
+    output = "both",
+    direction = "LR"
+  )
+)
+
+dir.create("pkgdown/assets", recursive = TRUE, showWarnings = FALSE)
+
+for (id in names(workflows)) {
+  save_mermaid_png(
+    x = workflows[[id]],
+    file = file.path("pkgdown", "assets", paste0(id, "-workflow.png"))
+  )
+}
 ```
 
 ## Core Agents
@@ -36,8 +103,12 @@ Article: [Code Generation Agent](code-agent.html)
 ![](../code-agent-workflow.png)
 
 ```{r, eval = FALSE}
-source("pkgdown/generate-agent-workflow-pngs.R")
-generate_agent_workflow_png("code-agent")
+workflow <- build_code_agent(
+  llm = dummy_llm,
+  output = "both",
+  direction = "LR"
+)
+save_mermaid_png(workflow, "pkgdown/assets/code-agent-workflow.png")
 ```
 
 ### SQL Query Agent
@@ -47,8 +118,13 @@ Article: [SQL Query Agent](sql-agent.html)
 ![](../sql-agent-workflow.png)
 
 ```{r, eval = FALSE}
-source("pkgdown/generate-agent-workflow-pngs.R")
-generate_agent_workflow_png("sql-agent")
+workflow <- build_sql_agent(
+  model = dummy_llm,
+  connection = NULL,
+  output = "both",
+  direction = "LR"
+)
+save_mermaid_png(workflow, "pkgdown/assets/sql-agent-workflow.png")
 ```
 
 ### Research Agent
@@ -58,8 +134,13 @@ Article: [Research Agent](research-agent.html)
 ![](../research-agent-workflow.png)
 
 ```{r, eval = FALSE}
-source("pkgdown/generate-agent-workflow-pngs.R")
-generate_agent_workflow_png("research-agent")
+workflow <- build_researcher_agent(
+  llm = dummy_llm,
+  tavily_search = "your-tavily-key",
+  output = "both",
+  direction = "LR"
+)
+save_mermaid_png(workflow, "pkgdown/assets/research-agent-workflow.png")
 ```
 
 ### Interpreter Agent
@@ -69,8 +150,12 @@ Article: [Interpreter Agent](interpreter-agent.html)
 ![](../interpreter-agent-workflow.png)
 
 ```{r, eval = FALSE}
-source("pkgdown/generate-agent-workflow-pngs.R")
-generate_agent_workflow_png("interpreter-agent")
+workflow <- build_interpreter_agent(
+  llm = dummy_llm,
+  output = "both",
+  direction = "LR"
+)
+save_mermaid_png(workflow, "pkgdown/assets/interpreter-agent-workflow.png")
 ```
 
 ### Document Summarizer Agent
@@ -80,8 +165,12 @@ Article: [Document Summarizer Agent](document-summarizer-agent.html)
 ![](../document-summarizer-agent-workflow.png)
 
 ```{r, eval = FALSE}
-source("pkgdown/generate-agent-workflow-pngs.R")
-generate_agent_workflow_png("document-summarizer-agent")
+workflow <- build_doc_summarizer_agent(
+  llm = dummy_llm,
+  output = "both",
+  direction = "LR"
+)
+save_mermaid_png(workflow, "pkgdown/assets/document-summarizer-agent-workflow.png")
 ```
 
 ### Data Cleaning Agent
@@ -91,8 +180,12 @@ Article: [Data Cleaning Agent](data-cleaning-agent.html)
 ![](../data-cleaning-agent-workflow.png)
 
 ```{r, eval = FALSE}
-source("pkgdown/generate-agent-workflow-pngs.R")
-generate_agent_workflow_png("data-cleaning-agent")
+workflow <- build_data_cleaning_agent(
+  model = dummy_llm,
+  output = "both",
+  direction = "LR"
+)
+save_mermaid_png(workflow, "pkgdown/assets/data-cleaning-agent-workflow.png")
 ```
 
 ### Forecasting Agent
@@ -102,8 +195,12 @@ Article: [Forecasting Agent](forecasting-agent.html)
 ![](../forecasting-agent-workflow.png)
 
 ```{r, eval = FALSE}
-source("pkgdown/generate-agent-workflow-pngs.R")
-generate_agent_workflow_png("forecasting-agent")
+workflow <- build_forecasting_agent(
+  model = dummy_llm,
+  output = "both",
+  direction = "LR"
+)
+save_mermaid_png(workflow, "pkgdown/assets/forecasting-agent-workflow.png")
 ```
 
 ### Data Wrangling Agent
@@ -113,8 +210,12 @@ Article: [Data Wrangling Agent](data-wrangling-agent.html)
 ![](../data-wrangling-agent-workflow.png)
 
 ```{r, eval = FALSE}
-source("pkgdown/generate-agent-workflow-pngs.R")
-generate_agent_workflow_png("data-wrangling-agent")
+workflow <- build_data_wrangling_agent(
+  model = dummy_llm,
+  output = "both",
+  direction = "LR"
+)
+save_mermaid_png(workflow, "pkgdown/assets/data-wrangling-agent-workflow.png")
 ```
 
 ### Weather Agent
@@ -124,8 +225,14 @@ Article: [Weather Agent](weather-agent.html)
 ![](../weather-agent-workflow.png)
 
 ```{r, eval = FALSE}
-source("pkgdown/generate-agent-workflow-pngs.R")
-generate_agent_workflow_png("weather-agent")
+workflow <- build_weather_agent(
+  llm = dummy_llm,
+  location_query = "Accra, Ghana",
+  weather_api_key = "your-openweathermap-key",
+  output = "both",
+  direction = "LR"
+)
+save_mermaid_png(workflow, "pkgdown/assets/weather-agent-workflow.png")
 ```
 
 ### Feature Engineering Agent
@@ -135,8 +242,12 @@ Article: [Feature Engineering Agent](feature-engineering-agent.html)
 ![](../feature-engineering-agent-workflow.png)
 
 ```{r, eval = FALSE}
-source("pkgdown/generate-agent-workflow-pngs.R")
-generate_agent_workflow_png("feature-engineering-agent")
+workflow <- build_feature_engineering_agent(
+  model = dummy_llm,
+  output = "both",
+  direction = "LR"
+)
+save_mermaid_png(workflow, "pkgdown/assets/feature-engineering-agent-workflow.png")
 ```
 
 ### Visualization Agent
@@ -146,12 +257,15 @@ Article: [Visualization Agent](visualization-agent.html)
 ![](../visualization-agent-workflow.png)
 
 ```{r, eval = FALSE}
-source("pkgdown/generate-agent-workflow-pngs.R")
-generate_agent_workflow_png("visualization-agent")
+workflow <- build_visualization_agent(
+  model = dummy_llm,
+  output = "both",
+  direction = "LR"
+)
+save_mermaid_png(workflow, "pkgdown/assets/visualization-agent-workflow.png")
 ```
 
 ## Custom Graph Workflows
 
 - [Building Custom Agents](custom-agents.html)
 - [Building Multi-Agent Teams](multi-agent-teams.html)
-

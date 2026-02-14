@@ -67,8 +67,134 @@ build_doc_summarizer_agent <- function(
     summary_template = NULL,
     chunk_size = 4000,
     overlap = 200,
-    verbose = TRUE
+    verbose = TRUE,
+    output = c("agent", "mermaid", "both"),
+    direction = c("TD", "LR"),
+    subgraphs = NULL,
+    style = TRUE
 ) {
+  output <- match.arg(output)
+  direction <- match.arg(direction)
+
+  if (!identical(output, "agent")) {
+    `%||%` <- function(a, b) if (!is.null(a)) a else b
+
+    node_functions <- list(
+      normalize_input = function(state) {
+        inputs <- as.character(state$input_data %||% state$inputs %||% "")
+        list(inputs = inputs)
+      },
+      load_files_or_text = function(state) {
+        list(raw_text = paste(state$inputs, collapse = "\n"), metadata = list())
+      },
+      clean_text = function(state) {
+        clean_text <- trimws(gsub("\\s+", " ", state$raw_text %||% ""))
+        list(clean_text = clean_text)
+      },
+      check_content = function(state) {
+        route <- if (!nzchar(state$clean_text %||% "")) "empty" else "ready"
+        list(route = route)
+      },
+      split_into_chunks = function(state) {
+        txt <- state$clean_text %||% ""
+        starts <- seq(1, nchar(txt), by = max(1, chunk_size - overlap))
+        ends <- pmin(starts + chunk_size - 1, nchar(txt))
+        chunks <- if (nchar(txt) == 0) {
+          character(0)
+        } else {
+          vapply(seq_along(starts), function(i) substr(txt, starts[[i]], ends[[i]]), character(1))
+        }
+        list(chunks = as.list(chunks))
+      },
+      summarize_chunks = function(state) {
+        parts <- state$chunks %||% list()
+        summaries <- lapply(parts, function(txt) {
+          prompt <- if (!is.null(summary_template)) {
+            gsub("\\{text\\}", txt, summary_template)
+          } else {
+            sprintf("Summarize this text:\n\n%s", txt)
+          }
+          llm(prompt)
+        })
+        list(partial_summaries = summaries)
+      },
+      combine_partial_summaries = function(state) {
+        partials <- state$partial_summaries %||% list()
+        combined <- if (length(partials) > 1) {
+          llm(paste("Combine these partial summaries:\n\n", paste(unlist(partials), collapse = "\n\n")))
+        } else if (length(partials) == 1) {
+          partials[[1]]
+        } else {
+          ""
+        }
+        list(summary_final = combined)
+      },
+      return_summary = function(state) {
+        list(
+          summary = state$summary_final %||% "",
+          metadata = state$metadata %||% list(),
+          chunks = length(state$chunks %||% list()),
+          success = TRUE
+        )
+      },
+      return_empty_summary = function(state) {
+        list(
+          summary = "",
+          metadata = state$metadata %||% list(),
+          chunks = 0L,
+          success = TRUE
+        )
+      },
+      return_error = function(state) {
+        list(
+          summary = NULL,
+          metadata = list(),
+          chunks = 0L,
+          success = FALSE
+        )
+      }
+    )
+
+    edges <- list(
+      c("normalize_input", "load_files_or_text"),
+      c("load_files_or_text", "clean_text"),
+      c("clean_text", "check_content"),
+      c("split_into_chunks", "summarize_chunks"),
+      c("summarize_chunks", "combine_partial_summaries"),
+      c("combine_partial_summaries", "return_summary"),
+      c("return_summary", "__end__"),
+      c("return_empty_summary", "__end__"),
+      c("return_error", "__end__")
+    )
+    conditional_edges <- list(
+      list(
+        from = "check_content",
+        condition = function(state) state$route %||% "failed",
+        mapping = list(
+          ready = "split_into_chunks",
+          empty = "return_empty_summary",
+          failed = "return_error"
+        )
+      )
+    )
+
+    compiled <- build_custom_agent(
+      node_functions = node_functions,
+      entry_point = "normalize_input",
+      edges = edges,
+      conditional_edges = conditional_edges,
+      output = "both",
+      direction = direction,
+      subgraphs = subgraphs,
+      style = style
+    )
+
+    if (identical(output, "mermaid")) {
+      return(compiled$mermaid)
+    }
+    return(compiled)
+  }
+
   if (verbose) message("=== STARTING DOCUMENT SUMMARIZER AGENT ===")
 
   # Check for required packages

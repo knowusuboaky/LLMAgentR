@@ -55,8 +55,178 @@ build_weather_agent <- function(
     n_tries = 3,
     backoff = 2,
     endpoint_url = NULL,
-    verbose = TRUE
+    verbose = TRUE,
+    output = c("agent", "mermaid", "both"),
+    direction = c("TD", "LR"),
+    subgraphs = NULL,
+    style = TRUE
 ) {
+  output <- match.arg(output)
+  direction <- match.arg(direction)
+
+  if (!identical(output, "agent")) {
+    `%||%` <- function(a, b) if (!is.null(a)) a else b
+
+    node_functions <- list(
+      validate_api_and_inputs = function(state) {
+        key <- state$weather_api_key %||% weather_api_key %||% Sys.getenv("OPENWEATHERMAP_API_KEY")
+        endpoint <- state$endpoint_url %||% endpoint_url %||% "https://api.openweathermap.org/data/2.5/weather"
+        list(
+          weather_api_key = key,
+          endpoint_url = endpoint,
+          units = state$units %||% match.arg(units),
+          location_query = state$location_query %||% location_query,
+          fetch_attempt = 0L,
+          llm_attempt = 0L
+        )
+      },
+      parse_location = function(state) {
+        parsed <- tryCatch(parse_and_validate_location(state$location_query), error = function(e) e)
+        if (inherits(parsed, "error")) {
+          return(list(location_error = parsed$message))
+        }
+        list(clean_location = parsed, location_error = NULL)
+      },
+      fetch_weather_api = function(state) {
+        attempt <- as.integer(state$fetch_attempt %||% 0L) + 1L
+        if (!is.null(state$location_error)) {
+          return(list(fetch_attempt = attempt, weather_error = state$location_error))
+        }
+        weather_info <- tryCatch(
+          get_fresh_weather(
+            location = state$clean_location,
+            api_key = state$weather_api_key,
+            units = state$units,
+            endpoint_url = state$endpoint_url
+          ),
+          error = function(e) e
+        )
+        if (inherits(weather_info, "error")) {
+          list(fetch_attempt = attempt, weather_error = weather_info$message, weather_info = NULL)
+        } else {
+          list(fetch_attempt = attempt, weather_error = NULL, weather_info = weather_info)
+        }
+      },
+      check_weather_fetch = function(state) {
+        route <- if (!is.null(state$weather_info)) {
+          "success"
+        } else if (as.integer(state$fetch_attempt %||% 0L) < as.integer(state$n_tries %||% n_tries)) {
+          "retry"
+        } else {
+          "failed"
+        }
+        list(route = route)
+      },
+      fetch_backoff = function(state) {
+        attempt <- as.integer(state$fetch_attempt %||% 1L)
+        wait_sec <- as.numeric(state$backoff %||% backoff) * (2 ^ max(0, attempt - 1L))
+        Sys.sleep(wait_sec)
+        list()
+      },
+      build_weather_prompt = function(state) {
+        prompt_used <- system_prompt %||% "You are a weather assistant."
+        llm_prompt <- sprintf(
+          "%s\n\nUser query: %s\n\nWeather data:\n%s",
+          prompt_used,
+          state$location_query,
+          state$weather_info$formatted
+        )
+        list(llm_prompt = llm_prompt)
+      },
+      call_llm = function(state) {
+        attempt <- as.integer(state$llm_attempt %||% 0L) + 1L
+        llm_response <- tryCatch(llm(prompt = state$llm_prompt), error = function(e) e)
+        if (inherits(llm_response, "error")) {
+          list(llm_attempt = attempt, llm_response = NULL, llm_error = llm_response$message)
+        } else {
+          list(llm_attempt = attempt, llm_response = llm_response, llm_error = NULL)
+        }
+      },
+      check_llm_response = function(state) {
+        route <- if (!is.null(state$llm_response) && nzchar(trimws(state$llm_response))) {
+          "success"
+        } else if (as.integer(state$llm_attempt %||% 0L) < as.integer(state$n_tries %||% n_tries)) {
+          "retry"
+        } else {
+          "failed"
+        }
+        list(route = route)
+      },
+      llm_backoff = function(state) {
+        attempt <- as.integer(state$llm_attempt %||% 1L)
+        wait_sec <- as.numeric(state$backoff %||% backoff) * (2 ^ max(0, attempt - 1L))
+        Sys.sleep(wait_sec)
+        list()
+      },
+      fallback_to_formatted_weather = function(state) {
+        list(llm_response = state$weather_info$formatted %||% state$weather_error %||% "Weather unavailable")
+      },
+      return_weather_payload = function(state) {
+        list(
+          success = !is.null(state$weather_info),
+          location = state$clean_location %||% "",
+          weather_raw = state$weather_info$raw %||% NULL,
+          weather_formatted = state$weather_info$formatted %||% NULL,
+          llm_response = state$llm_response %||% state$weather_info$formatted %||% NULL,
+          timestamp = Sys.time(),
+          attempts = as.integer(state$fetch_attempt %||% 0L) + as.integer(state$llm_attempt %||% 0L)
+        )
+      },
+      return_error = function(state) {
+        stop(state$weather_error %||% state$location_error %||% "Weather request failed")
+      }
+    )
+
+    edges <- list(
+      c("validate_api_and_inputs", "parse_location"),
+      c("parse_location", "fetch_weather_api"),
+      c("fetch_weather_api", "check_weather_fetch"),
+      c("fetch_backoff", "fetch_weather_api"),
+      c("build_weather_prompt", "call_llm"),
+      c("call_llm", "check_llm_response"),
+      c("llm_backoff", "call_llm"),
+      c("fallback_to_formatted_weather", "return_weather_payload"),
+      c("return_weather_payload", "__end__"),
+      c("return_error", "__end__")
+    )
+    conditional_edges <- list(
+      list(
+        from = "check_weather_fetch",
+        condition = function(state) state$route %||% "failed",
+        mapping = list(
+          success = "build_weather_prompt",
+          retry = "fetch_backoff",
+          failed = "return_error"
+        )
+      ),
+      list(
+        from = "check_llm_response",
+        condition = function(state) state$route %||% "failed",
+        mapping = list(
+          success = "return_weather_payload",
+          retry = "llm_backoff",
+          failed = "fallback_to_formatted_weather"
+        )
+      )
+    )
+
+    compiled <- build_custom_agent(
+      node_functions = node_functions,
+      entry_point = "validate_api_and_inputs",
+      edges = edges,
+      conditional_edges = conditional_edges,
+      output = "both",
+      direction = direction,
+      subgraphs = subgraphs,
+      style = style
+    )
+
+    if (identical(output, "mermaid")) {
+      return(compiled$mermaid)
+    }
+    return(compiled)
+  }
+
   if (verbose) message("=== STARTING WEATHER AGENT ===")
 
   # Check for required packages
